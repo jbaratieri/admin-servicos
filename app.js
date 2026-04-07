@@ -1,5 +1,12 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxpyz5mKI6oej5f5umOrV-tkAvtumI5X8E-o9Hna8YP5ZR9l2iUZtJwaIqFy-Vmcfxw/exec";
 
+let filtroAtual = "todos";
+
+document.getElementById("filtroStatus").addEventListener("change", e => {
+  filtroAtual = e.target.value;
+  render();
+});
+
 const flow = [
   "entrada",
   "diagnostico",
@@ -65,7 +72,15 @@ function render() {
   const lista = document.getElementById("lista");
   lista.innerHTML = "";
 
-  servicos.slice().reverse().forEach(s => {
+
+  servicos
+  .filter(s => {
+    if (filtroAtual === "todos") return true;
+    return (s.status || "entrada") === filtroAtual;
+  })
+  .slice()
+  .reverse()
+  .forEach(s => {
 
     const status = s.status || "entrada"; // ✅ AQUI SIM
 
