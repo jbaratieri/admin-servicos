@@ -25,26 +25,20 @@ function render() {
   lista.innerHTML = "";
 
   servicos.slice().reverse().forEach(s => {
-    const div = document.createElement("div");
+
+    const div = document.createElement("div"); // 👈 FALTAVA ISSO
     div.className = "card";
 
     div.innerHTML = `
       <b>${s.cliente}</b> (${s.instrumento})<br>
       ${s.problema}<br>
-      <small>Status: ${s.status}</small>
-    `;
+      <small>Status: ${s.status}</small><br>
 
-    
+      <button onclick="editar('${s.id}')">Editar</button>
+    `;
 
     lista.appendChild(div);
   });
-  div.innerHTML = `
-  <b>${s.cliente}</b> (${s.instrumento})<br>
-  ${s.problema}<br>
-  <small>Status: ${s.status}</small><br>
-
-  <button onclick="editar('${s.id}')">Editar</button>
-`;
 }
 
 function editar(id) {
