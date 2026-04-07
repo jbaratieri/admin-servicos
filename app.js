@@ -22,6 +22,7 @@ async function save() {
 
 function render() {
   const lista = document.getElementById("lista");
+  const status = s.status || "entrada";
   lista.innerHTML = "";
 
   servicos.slice().reverse().forEach(s => {
@@ -74,14 +75,14 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   } else {
     const novo = {
-      id: uid(),
-      cliente: cliente.value,
-      telefone: telefone.value,
-      instrumento: instrumento.value,
-      problema: problema.value,
-      status: status.value,
-      data: new Date().toISOString()
-    };
+  id: uid(),
+  cliente: cliente.value,
+  telefone: telefone.value,
+  instrumento: instrumento.value,
+  problema: problema.value,
+  status: "entrada", // 👈 NOVO
+  data: new Date().toISOString()
+};
 
     servicos.push(novo);
   }
