@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Serviços - Luthieria</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, select { margin: 5px; padding: 8px; width: 100%; }
+    button { padding: 10px; margin-top: 10px; }
+    .card { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<h2>Nova Ordem de Serviço</h2>
+
+<form id="form">
+  <input id="cliente" placeholder="Cliente" required>
+  <input id="telefone" placeholder="Telefone">
+  <input id="instrumento" placeholder="Instrumento">
+  <input id="problema" placeholder="Problema">
+  
+  <select id="status">
+    <option value="entrada">Entrada</option>
+    <option value="orcamento">Orçamento</option>
+    <option value="andamento">Em andamento</option>
+    <option value="pronto">Pronto</option>
+  </select>
+
+  <button type="submit">Salvar</button>
+</form>
+
+<h2>Serviços</h2>
+<div id="lista"></div>
+
+<script src="app.js"></script>
+
+</body>
+
+</html>
