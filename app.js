@@ -1,5 +1,15 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxpyz5mKI6oej5f5umOrV-tkAvtumI5X8E-o9Hna8YP5ZR9l2iUZtJwaIqFy-Vmcfxw/exec";
 
+const flow = [
+  "entrada",
+  "diagnostico",
+  "orcamento",
+  "aprovado",
+  "em_andamento",
+  "pronto",
+  "entregue"
+];
+
 let editingId = null;
 let servicos = [];
 
@@ -20,22 +30,58 @@ async function save() {
   });
 }
 
+// 🎨 cor por status
+function corStatus(status) {
+  switch (status) {
+    case "entrada": return "#999";
+    case "diagnostico": return "#f39c12";
+    case "orcamento": return "#3498db";
+    case "aprovado": return "#2ecc71";
+    case "em_andamento": return "#9b59b6";
+    case "pronto": return "#27ae60";
+    case "entregue": return "#2c3e50";
+    default: return "#ccc";
+  }
+}
+
+// 🔁 próximo status
+function nextStatus(current) {
+  const idx = flow.indexOf(current);
+  return flow[idx + 1] || current;
+}
+
+// 🚀 avançar status
+async function avancarStatus(id) {
+  const idx = servicos.findIndex(s => s.id === id);
+
+  const atual = servicos[idx].status || "entrada";
+  servicos[idx].status = nextStatus(atual);
+
+  await save();
+  render();
+}
+
 function render() {
   const lista = document.getElementById("lista");
-  const status = s.status || "entrada";
   lista.innerHTML = "";
 
   servicos.slice().reverse().forEach(s => {
 
-    const div = document.createElement("div"); // 👈 FALTAVA ISSO
+    const status = s.status || "entrada"; // ✅ AQUI SIM
+
+    const div = document.createElement("div");
     div.className = "card";
 
     div.innerHTML = `
       <b>${s.cliente}</b> (${s.instrumento})<br>
       ${s.problema}<br>
-      <small>Status: ${s.status}</small><br>
+
+      <small style="color:${corStatus(status)}">
+        Status: ${status}
+      </small><br>
 
       <button onclick="editar('${s.id}')">Editar</button>
+      <button onclick="avancarStatus('${s.id}')">➡️ Avançar</button>
     `;
 
     lista.appendChild(div);
@@ -49,7 +95,7 @@ function editar(id) {
   telefone.value = s.telefone;
   instrumento.value = s.instrumento;
   problema.value = s.problema;
-  status.value = s.status;
+  status.value = s.status || "entrada";
 
   editingId = id;
 
@@ -75,14 +121,14 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   } else {
     const novo = {
-  id: uid(),
-  cliente: cliente.value,
-  telefone: telefone.value,
-  instrumento: instrumento.value,
-  problema: problema.value,
-  status: "entrada", // 👈 NOVO
-  data: new Date().toISOString()
-};
+      id: uid(),
+      cliente: cliente.value,
+      telefone: telefone.value,
+      instrumento: instrumento.value,
+      problema: problema.value,
+      status: "entrada",
+      data: new Date().toISOString()
+    };
 
     servicos.push(novo);
   }
