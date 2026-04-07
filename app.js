@@ -93,8 +93,12 @@ function render() {
           ${s.instrumento}<br>
           <small>${s.problema}</small><br><br>
 
-          <button onclick="editar('${s.id}')">✏️</button>
-          <button onclick="avancarStatus('${s.id}')">➡️</button>
+          <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status)}" target="_blank">
+  📲
+</a>
+
+<button onclick="editar('${s.id}')">✏️</button>
+<button onclick="avancarStatus('${s.id}')">➡️</button>
         `;
 
         coluna.appendChild(div);
@@ -153,5 +157,45 @@ document.getElementById("form").addEventListener("submit", async e => {
   load();
   e.target.reset();
 });
+
+function gerarLinkWhatsApp(telefone, nome, status) {
+  if (!telefone) return "#";
+
+  // limpa número (remove espaços, parênteses, etc)
+  const numero = telefone.replace(/\D/g, "");
+
+  let mensagem = "";
+
+  switch (status) {
+    case "entrada":
+      mensagem = `Olá ${nome}, recebemos seu instrumento e em breve faremos o diagnóstico.`;
+      break;
+
+    case "diagnostico":
+      mensagem = `Olá ${nome}, estamos avaliando seu instrumento. Em breve envio o orçamento.`;
+      break;
+
+    case "orcamento":
+      mensagem = `Olá ${nome}, seu orçamento está pronto. Podemos prosseguir?`;
+      break;
+
+    case "em_andamento":
+      mensagem = `Olá ${nome}, seu instrumento está em manutenção.`;
+      break;
+
+    case "pronto":
+      mensagem = `Olá ${nome}, seu instrumento está pronto para retirada 🎸`;
+      break;
+
+    case "entregue":
+      mensagem = `Olá ${nome}, obrigado pela confiança no serviço 🙏`;
+      break;
+
+    default:
+      mensagem = `Olá ${nome}`;
+  }
+
+  return `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
+}
 
 load();
