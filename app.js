@@ -69,37 +69,38 @@ async function avancarStatus(id) {
 }
 
 function render() {
-  const lista = document.getElementById("lista");
-  lista.innerHTML = "";
+  const kanban = document.getElementById("kanban");
+  kanban.innerHTML = "";
 
+  flow.forEach(statusColuna => {
 
-  servicos
-  .filter(s => {
-    if (filtroAtual === "todos") return true;
-    return (s.status || "entrada") === filtroAtual;
-  })
-  .slice()
-  .reverse()
-  .forEach(s => {
+    const coluna = document.createElement("div");
+    coluna.className = "coluna";
 
-    const status = s.status || "entrada"; // ✅ AQUI SIM
+    coluna.innerHTML = `<h3>${statusColuna.replace("_", " ")}</h3>`;
 
-    const div = document.createElement("div");
-    div.className = "card";
+    servicos
+      .filter(s => (s.status || "entrada") === statusColuna)
+      .forEach(s => {
 
-    div.innerHTML = `
-      <b>${s.cliente}</b> (${s.instrumento})<br>
-      ${s.problema}<br>
+        const div = document.createElement("div");
+        div.className = "card";
 
-      <small style="color:${corStatus(status)}">
-        Status: ${status}
-      </small><br>
+        div.style.borderLeft = `5px solid ${corStatus(statusColuna)}`;
 
-      <button onclick="editar('${s.id}')">Editar</button>
-      <button onclick="avancarStatus('${s.id}')">➡️ Avançar</button>
-    `;
+        div.innerHTML = `
+          <b>${s.cliente}</b><br>
+          ${s.instrumento}<br>
+          <small>${s.problema}</small><br><br>
 
-    lista.appendChild(div);
+          <button onclick="editar('${s.id}')">✏️</button>
+          <button onclick="avancarStatus('${s.id}')">➡️</button>
+        `;
+
+        coluna.appendChild(div);
+      });
+
+    kanban.appendChild(coluna);
   });
 }
 
