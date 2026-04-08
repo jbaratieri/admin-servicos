@@ -70,7 +70,7 @@ async function avancarStatus(id) {
 function render() {
   const kanban = document.getElementById("kanban");
   kanban.innerHTML = "";
-
+const pagamento = s.pagamento || "pendente";
   flow.forEach(statusColuna => {
 
     const coluna = document.createElement("div");
@@ -94,6 +94,16 @@ function render() {
   <small>${s.problema}</small><br>
 
   ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+
+  ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+
+<small style="color:${pagamento === "pago" ? "green" : "red"}">
+  ${pagamento === "pago" ? "Pago" : "Pendente"}
+</small><br>
+
+<button onclick="togglePagamento('${s.id}')">
+  💰
+</button>
 
   <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">
     📲
@@ -125,6 +135,7 @@ function editar(id) {
   problema.value = s.problema;
   status.value = s.status || "entrada";
   orcamento.value = s.orcamento || "";
+  pagamento.value = s.pagamento || "pendente";
 
   editingId = id;
 
@@ -138,28 +149,30 @@ document.getElementById("form").addEventListener("submit", async e => {
     const idx = servicos.findIndex(s => s.id === editingId);
 
     servicos[idx] = {
-      ...servicos[idx],
-      cliente: cliente.value,
-      telefone: telefone.value,
-      instrumento: instrumento.value,
-      problema: problema.value,
-      status: status.value,
-      orcamento: orcamento.value // 👈 AQUI
-    };
+  ...servicos[idx],
+  cliente: cliente.value,
+  telefone: telefone.value,
+  instrumento: instrumento.value,
+  problema: problema.value,
+  status: status.value,
+  orcamento: orcamento.value,
+  pagamento: pagamento.value // 👈 NOVO
+};
 
     editingId = null;
 
   } else {
-    const novo = {
-      id: uid(),
-      cliente: cliente.value,
-      telefone: telefone.value,
-      instrumento: instrumento.value,
-      problema: problema.value,
-      status: "entrada",
-      orcamento: orcamento.value || "",
-      data: new Date().toISOString()
-    };
+   const novo = {
+  id: uid(),
+  cliente: cliente.value,
+  telefone: telefone.value,
+  instrumento: instrumento.value,
+  problema: problema.value,
+  status: "entrada",
+  orcamento: orcamento.value || "",
+  pagamento: pagamento.value || "pendente", // 👈 NOVO
+  data: new Date().toISOString()
+};
 
     servicos.push(novo);
   }
@@ -194,6 +207,15 @@ function gerarLinkWhatsApp(telefone, nome, status, valor) {
 
   return `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
 }
+async function togglePagamento(id) {
+  const idx = servicos.findIndex(s => s.id === id);
 
+  const atual = servicos[idx].pagamento || "pendente";
+
+  servicos[idx].pagamento = atual === "pago" ? "pendente" : "pago";
+
+  await save();
+  render();
+}
 
 load();
