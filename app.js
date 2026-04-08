@@ -291,10 +291,14 @@ document.getElementById("form").addEventListener("submit", async e => {
 
 document.getElementById("filtroStatus")?.addEventListener("change", render);
 
-document.getElementById("fab").onclick = () => {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-  cliente.focus();
-};
+const fab = document.getElementById("fab");
+
+if (fab) {
+  fab.onclick = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    cliente.focus();
+  };
+}
 
 // 🚀 iniciar
 load();
