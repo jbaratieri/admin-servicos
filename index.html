@@ -15,27 +15,29 @@
 <body>
 
   <h2>Nova Ordem de Serviço</h2>
+  <div id="form-container">
+    <form id="form">
+      <input id="cliente" placeholder="Cliente" required>
+      <input id="telefone" placeholder="Telefone">
+      <input id="instrumento" placeholder="Instrumento">
+      <input id="problema" placeholder="Problema">
+      <input id="orcamento" placeholder="Orçamento (R$)">
 
-  <form id="form">
-    <input id="cliente" placeholder="Cliente" required>
-    <input id="telefone" placeholder="Telefone">
-    <input id="instrumento" placeholder="Instrumento">
-    <input id="problema" placeholder="Problema">
-    <input id="orcamento" placeholder="Orçamento (R$)">
+      <select id="status">
+        <option value="entrada">Entrada</option>
+        <option value="orcamento">Orçamento</option>
+        <option value="andamento">Em andamento</option>
+        <option value="pronto">Pronto</option>
+      </select>
+      <select id="pagamento">
+        <option value="pendente">Pendente</option>
+        <option value="pago">Pago</option>
+      </select>
 
-    <select id="status">
-      <option value="entrada">Entrada</option>
-      <option value="orcamento">Orçamento</option>
-      <option value="andamento">Em andamento</option>
-      <option value="pronto">Pronto</option>
-    </select>
-    <select id="pagamento">
-      <option value="pendente">Pendente</option>
-      <option value="pago">Pago</option>
-    </select>
-
-    <button type="submit">Salvar</button>
-  </form>
+      <button type="submit">Salvar</button>
+      <button type="button" onclick="fecharForm()">Cancelar</button>
+    </form>
+  </div>
 
 
   <select id="filtroStatus">
@@ -52,7 +54,7 @@
   <h2>Serviços</h2>
   <div id="kanban" class="kanban"></div>
 
-  <button id="fab">+</button>
+  <button id="fab">+ Nova OS</button>
 
   <script src="app.js"></script>
 

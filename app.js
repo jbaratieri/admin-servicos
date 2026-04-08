@@ -252,6 +252,8 @@ function editar(id) {
 document.getElementById("form").addEventListener("submit", async e => {
   e.preventDefault();
 
+  formContainer.style.display = "none";
+
   if (editingId) {
     const idx = servicos.findIndex(s => s.id === editingId);
 
@@ -292,12 +294,23 @@ document.getElementById("form").addEventListener("submit", async e => {
 document.getElementById("filtroStatus")?.addEventListener("change", render);
 
 const fab = document.getElementById("fab");
+const formContainer = document.getElementById("form-container");
 
-if (fab) {
+if (fab && formContainer) {
   fab.onclick = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    formContainer.style.display = "block";
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+
     cliente.focus();
   };
+}
+
+function fecharForm() {
+  formContainer.style.display = "none";
 }
 
 // 🚀 iniciar
