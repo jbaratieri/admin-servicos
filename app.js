@@ -268,7 +268,7 @@ document.getElementById("form").addEventListener("submit", async e => {
   e.target.reset();
 });
 
-
+document.getElementById("filtroStatus")?.addEventListener("change", render);
 
 // 🚀 iniciar
 load();
