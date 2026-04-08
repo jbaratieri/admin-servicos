@@ -138,10 +138,6 @@ function renderKanban() {
 
         const div = document.createElement("div");
         div.className = "card";
-        
-        if (s.status !== "entregue") {
-  div.style.background = "#fffbea";
-}
 
         div.style.borderLeft = `5px solid ${corStatus(statusColuna)}`;
 
@@ -191,36 +187,38 @@ function renderMobile() {
       const div = document.createElement("div");
       div.className = "card";
       if (s.status !== "entregue") {
-  div.style.background = "#fffbea";
-}
+        div.style.background = "#fff9e6";
+      }
+
+      if (s.status === "pronto") {
+        div.style.background = "#e8f8f5";
+      }
 
       div.innerHTML = `
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-    <b>${s.cliente}</b>
-    <span style="font-size:12px; color:${corStatus(s.status)}">
+  <div class="card-topo">
+    <div>
+      <div class="cliente">${s.cliente}</div>
+      <div class="instrumento">${s.instrumento}</div>
+    </div>
+
+    <div class="status-tag" style="background:${corStatus(s.status)}">
       ${formatarStatus(s.status)}
-    </span>
+    </div>
   </div>
 
-  <div style="margin-top:6px;">
-    ${s.instrumento}
-  </div>
-
-  <small style="color:#666;">
-    ${s.problema}
-  </small>
+  <div class="problema">${s.problema}</div>
 
   ${s.orcamento ? `
-    <div style="margin-top:6px;">
-      💵 <strong>R$ ${s.orcamento}</strong>
-    </div>
+    <div class="orcamento">💰 R$ ${s.orcamento}</div>
   ` : ""}
 
-  <div style="margin-top:6px; color:${pagamento === "pago" ? "green" : "red"}">
-    ${pagamento === "pago" ? "Pago" : "Pendente"}
+  <div class="rodape">
+    <div class="pagamento ${pagamento === "pago" ? "pago" : "pendente"}">
+      ${pagamento === "pago" ? "Pago" : "Pendente"}
+    </div>
   </div>
 
-  <div style="display:flex; gap:8px; margin-top:10px;">
+  <div class="acoes">
     <button onclick="togglePagamento('${s.id}')">💰</button>
     <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">📲</a>
     <button onclick="editar('${s.id}')">✏️</button>
@@ -292,6 +290,11 @@ document.getElementById("form").addEventListener("submit", async e => {
 });
 
 document.getElementById("filtroStatus")?.addEventListener("change", render);
+
+document.getElementById("fab").onclick = () => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  cliente.focus();
+};
 
 // 🚀 iniciar
 load();

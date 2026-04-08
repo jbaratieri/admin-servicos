@@ -42,11 +42,14 @@
 
   .card {
     background: white;
-    padding: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 12px;   padding: 10px;
     margin-bottom: 10px;
     border-radius: 6px;
     border-left: 5px solid #ccc;
   }
+
 
   button,
   a {
@@ -56,15 +59,15 @@
 
   .card {
     margin-bottom: 12px;
-  }
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
 
-  .card button,
+.card button,
 .card a {
   flex: 1;
-  padding: 10px;
-  font-size: 16px;
-  border-radius: 8px;
-  text-align: center;
+  padding: 12px;
+  font-size: 18px;
+  border-radius: 10px;
 }
 
 #filtroStatus {
@@ -73,4 +76,100 @@
   margin-bottom: 10px;
   font-size: 16px;
   border-radius: 8px;
+}
+.card {
+  padding: 14px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+
+/* topo */
+.card-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cliente {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.instrumento {
+  font-size: 14px;
+  color: #555;
+}
+
+/* status */
+.status-tag {
+  color: #fff;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+/* problema */
+.problema {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+/* valor */
+.orcamento {
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+/* rodape */
+.rodape {
+  margin-top: 6px;
+}
+
+.pagamento {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.pagamento.pago {
+  color: green;
+}
+
+.pagamento.pendente {
+  color: red;
+}
+
+/* ações */
+.acoes {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.acoes button,
+.acoes a {
+  flex: 1;
+  padding: 12px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: none;
+  background: #f1f1f1;
+  text-align: center;
+}
+
+#fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  border: none;
+  font-size: 28px;
+  background: #27ae60;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
