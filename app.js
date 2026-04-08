@@ -12,6 +12,10 @@ const flow = [
 let editingId = null;
 let servicos = [];
 
+function isMobile() {
+  return window.innerWidth < 768;
+}
+
 // 🔹 gerar ID
 function uid() {
   return "OS-" + Date.now().toString().slice(-5);
@@ -105,8 +109,17 @@ function formatarStatus(status) {
     .replace(/\b\w/g, l => l.toUpperCase());
 }
 
-// 🧠 renderizar kanban
 function render() {
+  if (isMobile()) {
+    renderMobile();
+  } else {
+    renderKanban();
+  }
+}
+
+
+// 🧠 renderizar kanban
+function renderKanban() {
   const kanban = document.getElementById("kanban");
   kanban.innerHTML = "";
 
@@ -154,6 +167,47 @@ function render() {
 
     kanban.appendChild(coluna);
   });
+}
+
+function renderMobile() {
+  const kanban = document.getElementById("kanban");
+  kanban.innerHTML = "";
+
+  const statusSelecionado = document.getElementById("filtroStatus")?.value || "entrada";
+
+  const lista = document.createElement("div");
+
+  servicos
+    .filter(s => (s.status || "entrada") === statusSelecionado)
+    .reverse()
+    .forEach(s => {
+
+      const pagamento = s.pagamento || "pendente";
+
+      const div = document.createElement("div");
+      div.className = "card";
+
+      div.innerHTML = `
+        <b>${s.cliente}</b><br>
+        ${s.instrumento}<br>
+        <small>${s.problema}</small><br>
+
+        ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+
+        <small style="color:${pagamento === "pago" ? "green" : "red"}">
+          ${pagamento === "pago" ? "Pago" : "Pendente"}
+        </small><br><br>
+
+        <button onclick="togglePagamento('${s.id}')">💰</button>
+        <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">📲</a>
+        <button onclick="editar('${s.id}')">✏️</button>
+        <button onclick="avancarStatus('${s.id}')">➡️</button>
+      `;
+
+      lista.appendChild(div);
+    });
+
+  kanban.appendChild(lista);
 }
 
 // ✏️ editar
@@ -213,6 +267,8 @@ document.getElementById("form").addEventListener("submit", async e => {
   load();
   e.target.reset();
 });
+
+
 
 // 🚀 iniciar
 load();
