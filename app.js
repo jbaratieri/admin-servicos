@@ -1,12 +1,5 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxpyz5mKI6oej5f5umOrV-tkAvtumI5X8E-o9Hna8YP5ZR9l2iUZtJwaIqFy-Vmcfxw/exec";
 
-let filtroAtual = "todos";
-
-document.getElementById("filtroStatus").addEventListener("change", e => {
-  filtroAtual = e.target.value;
-  render();
-});
-
 const flow = [
   "entrada",
   "diagnostico",
@@ -19,16 +12,19 @@ const flow = [
 let editingId = null;
 let servicos = [];
 
+// 🔹 gerar ID
 function uid() {
   return "OS-" + Date.now().toString().slice(-5);
 }
 
+// 🔹 carregar dados
 async function load() {
   const res = await fetch(API_URL);
   servicos = await res.json();
   render();
 }
 
+// 🔹 salvar dados
 async function save() {
   await fetch(API_URL, {
     method: "POST",
@@ -42,7 +38,6 @@ function corStatus(status) {
     case "entrada": return "#999";
     case "diagnostico": return "#f39c12";
     case "orcamento": return "#3498db";
-    case "aprovado": return "#2ecc71";
     case "em_andamento": return "#9b59b6";
     case "pronto": return "#27ae60";
     case "entregue": return "#2c3e50";
@@ -67,127 +62,22 @@ async function avancarStatus(id) {
   render();
 }
 
-function render() {
-  const kanban = document.getElementById("kanban");
-  kanban.innerHTML = "";
-const pagamento = s.pagamento || "pendente";
-  flow.forEach(statusColuna => {
+// 💰 alternar pagamento
+async function togglePagamento(id) {
+  const idx = servicos.findIndex(s => s.id === id);
 
-    const coluna = document.createElement("div");
-    coluna.className = "coluna";
-
-    coluna.innerHTML = `<h3>${statusColuna.replace("_", " ")}</h3>`;
-    coluna.innerHTML = `<h3>${formatarStatus(statusColuna)}</h3>`;
-
-    servicos
-      .filter(s => (s.status || "entrada") === statusColuna)
-      .forEach(s => {
-
-        const div = document.createElement("div");
-        div.className = "card";
-
-        div.style.borderLeft = `5px solid ${corStatus(statusColuna)}`;
-
-       div.innerHTML = `
-  <b>${s.cliente}</b><br>
-  ${s.instrumento}<br>
-  <small>${s.problema}</small><br>
-
-  ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
-
-  ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
-
-<small style="color:${pagamento === "pago" ? "green" : "red"}">
-  ${pagamento === "pago" ? "Pago" : "Pendente"}
-</small><br>
-
-<button onclick="togglePagamento('${s.id}')">
-  💰
-</button>
-
-  <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">
-    📲
-  </a>
-
-  <button onclick="editar('${s.id}')">✏️</button>
-  <button onclick="avancarStatus('${s.id}')">➡️</button>
-`;
-
-        coluna.appendChild(div);
-      });
-
-    kanban.appendChild(coluna);
-  });
-}
-
-function formatarStatus(status) {
-  return status
-    .replace("_", " ")
-    .replace(/\b\w/g, l => l.toUpperCase());
-}
-
-function editar(id) {
-  const s = servicos.find(x => x.id === id);
-
-  cliente.value = s.cliente;
-  telefone.value = s.telefone;
-  instrumento.value = s.instrumento;
-  problema.value = s.problema;
-  status.value = s.status || "entrada";
-  orcamento.value = s.orcamento || "";
-  pagamento.value = s.pagamento || "pendente";
-
-  editingId = id;
-
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-document.getElementById("form").addEventListener("submit", async e => {
-  e.preventDefault();
-
-  if (editingId) {
-    const idx = servicos.findIndex(s => s.id === editingId);
-
-    servicos[idx] = {
-  ...servicos[idx],
-  cliente: cliente.value,
-  telefone: telefone.value,
-  instrumento: instrumento.value,
-  problema: problema.value,
-  status: status.value,
-  orcamento: orcamento.value,
-  pagamento: pagamento.value // 👈 NOVO
-};
-
-    editingId = null;
-
-  } else {
-   const novo = {
-  id: uid(),
-  cliente: cliente.value,
-  telefone: telefone.value,
-  instrumento: instrumento.value,
-  problema: problema.value,
-  status: "entrada",
-  orcamento: orcamento.value || "",
-  pagamento: pagamento.value || "pendente", // 👈 NOVO
-  data: new Date().toISOString()
-};
-
-    servicos.push(novo);
-  }
+  const atual = servicos[idx].pagamento || "pendente";
+  servicos[idx].pagamento = atual === "pago" ? "pendente" : "pago";
 
   await save();
-  load();
-  e.target.reset();
-});
+  render();
+}
 
+// 📲 WhatsApp
 function gerarLinkWhatsApp(telefone, nome, status, valor) {
   if (!telefone) return "#";
 
   const numero = telefone.replace(/\D/g, "");
-
-  // 👇 garante que valor exista
   const v = valor || "0";
 
   let mensagem = "";
@@ -207,15 +97,122 @@ function gerarLinkWhatsApp(telefone, nome, status, valor) {
 
   return `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
 }
-async function togglePagamento(id) {
-  const idx = servicos.findIndex(s => s.id === id);
 
-  const atual = servicos[idx].pagamento || "pendente";
-
-  servicos[idx].pagamento = atual === "pago" ? "pendente" : "pago";
-
-  await save();
-  render();
+// 🔤 formatar nome do status
+function formatarStatus(status) {
+  return status
+    .replace("_", " ")
+    .replace(/\b\w/g, l => l.toUpperCase());
 }
 
+// 🧠 renderizar kanban
+function render() {
+  const kanban = document.getElementById("kanban");
+  kanban.innerHTML = "";
+
+  flow.forEach(statusColuna => {
+
+    const coluna = document.createElement("div");
+    coluna.className = "coluna";
+
+    coluna.innerHTML = `<h3>${formatarStatus(statusColuna)}</h3>`;
+
+    servicos
+      .filter(s => (s.status || "entrada") === statusColuna)
+      .forEach(s => {
+
+        const pagamento = s.pagamento || "pendente";
+
+        const div = document.createElement("div");
+        div.className = "card";
+
+        div.style.borderLeft = `5px solid ${corStatus(statusColuna)}`;
+
+        div.innerHTML = `
+          <b>${s.cliente}</b><br>
+          ${s.instrumento}<br>
+          <small>${s.problema}</small><br>
+
+          ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+
+          <small style="color:${pagamento === "pago" ? "green" : "red"}">
+            ${pagamento === "pago" ? "Pago" : "Pendente"}
+          </small><br>
+
+          <button onclick="togglePagamento('${s.id}')">💰</button>
+
+          <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">
+            📲
+          </a>
+
+          <button onclick="editar('${s.id}')">✏️</button>
+          <button onclick="avancarStatus('${s.id}')">➡️</button>
+        `;
+
+        coluna.appendChild(div);
+      });
+
+    kanban.appendChild(coluna);
+  });
+}
+
+// ✏️ editar
+function editar(id) {
+  const s = servicos.find(x => x.id === id);
+
+  cliente.value = s.cliente;
+  telefone.value = s.telefone;
+  instrumento.value = s.instrumento;
+  problema.value = s.problema;
+  status.value = s.status || "entrada";
+  orcamento.value = s.orcamento || "";
+  pagamento.value = s.pagamento || "pendente";
+
+  editingId = id;
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// 🧾 salvar formulário
+document.getElementById("form").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  if (editingId) {
+    const idx = servicos.findIndex(s => s.id === editingId);
+
+    servicos[idx] = {
+      ...servicos[idx],
+      cliente: cliente.value,
+      telefone: telefone.value,
+      instrumento: instrumento.value,
+      problema: problema.value,
+      status: status.value,
+      orcamento: orcamento.value,
+      pagamento: pagamento.value
+    };
+
+    editingId = null;
+
+  } else {
+    const novo = {
+      id: uid(),
+      cliente: cliente.value,
+      telefone: telefone.value,
+      instrumento: instrumento.value,
+      problema: problema.value,
+      status: "entrada",
+      orcamento: orcamento.value || "",
+      pagamento: pagamento.value || "pendente",
+      data: new Date().toISOString()
+    };
+
+    servicos.push(novo);
+  }
+
+  await save();
+  load();
+  e.target.reset();
+});
+
+// 🚀 iniciar
 load();
