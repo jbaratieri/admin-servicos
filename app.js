@@ -13,7 +13,7 @@ let editingId = null;
 let servicos = [];
 
 function isMobile() {
-  return window.innerWidth < 768;
+  return true;
 }
 
 // 🔹 gerar ID
