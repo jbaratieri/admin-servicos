@@ -88,20 +88,20 @@ function render() {
 
         div.style.borderLeft = `5px solid ${corStatus(statusColuna)}`;
 
-        div.innerHTML = `
-          <b>${s.cliente}</b><br>
-          ${s.instrumento}<br>
-<small>${s.problema}</small><br>
+       div.innerHTML = `
+  <b>${s.cliente}</b><br>
+  ${s.instrumento}<br>
+  <small>${s.problema}</small><br>
 
-${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+  ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
 
-function gerarLinkWhatsApp(telefone, nome, status, valor) {<a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">
-  📲
-</a>
+  <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">
+    📲
+  </a>
 
-<button onclick="editar('${s.id}')">✏️</button>
-<button onclick="avancarStatus('${s.id}')">➡️</button>
-        `;
+  <button onclick="editar('${s.id}')">✏️</button>
+  <button onclick="avancarStatus('${s.id}')">➡️</button>
+`;
 
         coluna.appendChild(div);
       });
