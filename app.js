@@ -91,9 +91,11 @@ function render() {
         div.innerHTML = `
           <b>${s.cliente}</b><br>
           ${s.instrumento}<br>
-          <small>${s.problema}</small><br><br>
+<small>${s.problema}</small><br>
 
-          <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status)}" target="_blank">
+${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+
+function gerarLinkWhatsApp(telefone, nome, status, valor) {<a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">
   📲
 </a>
 
@@ -116,6 +118,7 @@ function editar(id) {
   instrumento.value = s.instrumento;
   problema.value = s.problema;
   status.value = s.status || "entrada";
+  orcamento.value = s.orcamento || "";
 
   editingId = id;
 
@@ -134,7 +137,8 @@ document.getElementById("form").addEventListener("submit", async e => {
       telefone: telefone.value,
       instrumento: instrumento.value,
       problema: problema.value,
-      status: status.value
+      status: status.value,
+      orcamento: orcamento.value // 👈 AQUI
     };
 
     editingId = null;
@@ -147,6 +151,7 @@ document.getElementById("form").addEventListener("submit", async e => {
       instrumento: instrumento.value,
       problema: problema.value,
       status: "entrada",
+      orcamento: orcamento.value || "",
       data: new Date().toISOString()
     };
 
@@ -176,7 +181,7 @@ function gerarLinkWhatsApp(telefone, nome, status) {
       break;
 
     case "orcamento":
-      mensagem = `Olá ${nome}, seu orçamento está pronto. Podemos prosseguir?`;
+      mensagem = `Olá ${nome}, seu orçamento ficou em R$ ${valor}. Podemos prosseguir?`;
       break;
 
     case "em_andamento":
@@ -184,7 +189,7 @@ function gerarLinkWhatsApp(telefone, nome, status) {
       break;
 
     case "pronto":
-      mensagem = `Olá ${nome}, seu instrumento está pronto para retirada 🎸`;
+      mensagem = `Olá ${nome}, seu instrumento está pronto 🎸 Valor: R$ ${valor}`;
       break;
 
     case "entregue":
