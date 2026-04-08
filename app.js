@@ -11,7 +11,6 @@ const flow = [
   "entrada",
   "diagnostico",
   "orcamento",
-  "aprovado",
   "em_andamento",
   "pronto",
   "entregue"
@@ -78,6 +77,7 @@ function render() {
     coluna.className = "coluna";
 
     coluna.innerHTML = `<h3>${statusColuna.replace("_", " ")}</h3>`;
+    coluna.innerHTML = `<h3>${formatarStatus(statusColuna)}</h3>`;
 
     servicos
       .filter(s => (s.status || "entrada") === statusColuna)
@@ -108,6 +108,12 @@ function render() {
 
     kanban.appendChild(coluna);
   });
+}
+
+function formatarStatus(status) {
+  return status
+    .replace("_", " ")
+    .replace(/\b\w/g, l => l.toUpperCase());
 }
 
 function editar(id) {
@@ -163,37 +169,23 @@ document.getElementById("form").addEventListener("submit", async e => {
   e.target.reset();
 });
 
-function gerarLinkWhatsApp(telefone, nome, status) {
+function gerarLinkWhatsApp(telefone, nome, status, valor) {
   if (!telefone) return "#";
 
-  // limpa número (remove espaços, parênteses, etc)
   const numero = telefone.replace(/\D/g, "");
+
+  // 👇 garante que valor exista
+  const v = valor || "0";
 
   let mensagem = "";
 
   switch (status) {
-    case "entrada":
-      mensagem = `Olá ${nome}, recebemos seu instrumento e em breve faremos o diagnóstico.`;
-      break;
-
-    case "diagnostico":
-      mensagem = `Olá ${nome}, estamos avaliando seu instrumento. Em breve envio o orçamento.`;
-      break;
-
     case "orcamento":
-      mensagem = `Olá ${nome}, seu orçamento ficou em R$ ${valor}. Podemos prosseguir?`;
-      break;
-
-    case "em_andamento":
-      mensagem = `Olá ${nome}, seu instrumento está em manutenção.`;
+      mensagem = `Olá ${nome}, seu orçamento ficou em R$ ${v}. Podemos prosseguir?`;
       break;
 
     case "pronto":
-      mensagem = `Olá ${nome}, seu instrumento está pronto 🎸 Valor: R$ ${valor}`;
-      break;
-
-    case "entregue":
-      mensagem = `Olá ${nome}, obrigado pela confiança no serviço 🙏`;
+      mensagem = `Olá ${nome}, seu instrumento está pronto 🎸 Valor: R$ ${v}`;
       break;
 
     default:
@@ -202,5 +194,6 @@ function gerarLinkWhatsApp(telefone, nome, status) {
 
   return `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
 }
+
 
 load();
