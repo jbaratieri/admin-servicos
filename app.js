@@ -138,6 +138,10 @@ function renderKanban() {
 
         const div = document.createElement("div");
         div.className = "card";
+        
+        if (s.status !== "entregue") {
+  div.style.background = "#fffbea";
+}
 
         div.style.borderLeft = `5px solid ${corStatus(statusColuna)}`;
 
@@ -186,24 +190,43 @@ function renderMobile() {
 
       const div = document.createElement("div");
       div.className = "card";
+      if (s.status !== "entregue") {
+  div.style.background = "#fffbea";
+}
 
       div.innerHTML = `
-        <b>${s.cliente}</b><br>
-        ${s.instrumento}<br>
-        <small>${s.problema}</small><br>
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <b>${s.cliente}</b>
+    <span style="font-size:12px; color:${corStatus(s.status)}">
+      ${formatarStatus(s.status)}
+    </span>
+  </div>
 
-        ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+  <div style="margin-top:6px;">
+    ${s.instrumento}
+  </div>
 
-        <small style="color:${pagamento === "pago" ? "green" : "red"}">
-          ${pagamento === "pago" ? "Pago" : "Pendente"}
-        </small><br><br>
+  <small style="color:#666;">
+    ${s.problema}
+  </small>
 
-        <button onclick="togglePagamento('${s.id}')">💰</button>
-        <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">📲</a>
-        <button onclick="editar('${s.id}')">✏️</button>
-        <button onclick="avancarStatus('${s.id}')">➡️</button>
-      `;
+  ${s.orcamento ? `
+    <div style="margin-top:6px;">
+      💵 <strong>R$ ${s.orcamento}</strong>
+    </div>
+  ` : ""}
 
+  <div style="margin-top:6px; color:${pagamento === "pago" ? "green" : "red"}">
+    ${pagamento === "pago" ? "Pago" : "Pendente"}
+  </div>
+
+  <div style="display:flex; gap:8px; margin-top:10px;">
+    <button onclick="togglePagamento('${s.id}')">💰</button>
+    <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">📲</a>
+    <button onclick="editar('${s.id}')">✏️</button>
+    <button onclick="avancarStatus('${s.id}')">➡️</button>
+  </div>
+`;
       lista.appendChild(div);
     });
 
