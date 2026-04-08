@@ -14,28 +14,42 @@
 
 <body>
 
-  <h2>Nova Ordem de Serviço</h2>
+
   <div id="form-container">
-    <form id="form">
-      <input id="cliente" placeholder="Cliente" required>
-      <input id="telefone" placeholder="Telefone">
+    <div class="form-header">
+      <button onclick="fecharForm()">←</button>
+      <h2>Nova Ordem de Serviço</h2>
+    </div>
+
+    <form id="form" class="form-app">
+
+      <input id="cliente" placeholder="Nome do cliente" required>
+      <input id="telefone" placeholder="WhatsApp">
+
       <input id="instrumento" placeholder="Instrumento">
-      <input id="problema" placeholder="Problema">
-      <input id="orcamento" placeholder="Orçamento (R$)">
+      <textarea id="problema" placeholder="Problema"></textarea>
+
+      <input id="orcamento" placeholder="Orçamento (R$)" type="number">
 
       <select id="status">
         <option value="entrada">Entrada</option>
+        <option value="diagnostico">Diagnóstico</option>
         <option value="orcamento">Orçamento</option>
-        <option value="andamento">Em andamento</option>
+        <option value="em_andamento">Em andamento</option>
         <option value="pronto">Pronto</option>
+        <option value="entregue">Entregue</option>
       </select>
+
       <select id="pagamento">
         <option value="pendente">Pendente</option>
         <option value="pago">Pago</option>
       </select>
 
-      <button type="submit">Salvar</button>
-      <button type="button" onclick="fecharForm()">Cancelar</button>
+      <div class="form-actions">
+        <button type="button" class="cancelar" onclick="fecharForm()">Cancelar</button>
+        <button type="submit" class="salvar">Salvar</button>
+      </div>
+
     </form>
   </div>
 

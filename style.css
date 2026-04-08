@@ -3,21 +3,79 @@
     font-family: Arial;
     padding: 20px;
   }
-
-  #form-container {
-  display: none;
-}
-
 #form-container {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: #ffffff;
+  background: #f9f9f9;
   z-index: 999;
+  display: none;
   overflow-y: auto;
+}
+
+/* topo */
+.form-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+}
+
+.form-header h2 {
+  font-size: 16px;
+}
+
+/* form */
+.form-app {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 15px;
+}
+
+/* inputs */
+.form-app input,
+.form-app textarea,
+.form-app select {
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  background: #fff;
+}
+
+/* textarea */
+.form-app textarea {
+  min-height: 80px;
+  resize: none;
+}
+
+/* ações */
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.form-actions button {
+  flex: 1;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+}
+
+.cancelar {
+  background: #ddd;
+}
+
+.salvar {
+  background: #27ae60;
+  color: #fff;
 }
 
   input,

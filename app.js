@@ -12,6 +12,16 @@ const flow = [
 let editingId = null;
 let servicos = [];
 
+const formContainer = document.getElementById("form-container");
+
+function abrirForm() {
+  formContainer.style.display = "block";
+}
+
+function fecharForm() {
+  formContainer.style.display = "none";
+}
+
 function isMobile() {
   return window.innerWidth < 768;
 }
@@ -289,24 +299,17 @@ document.getElementById("form").addEventListener("submit", async e => {
   await save();
   load();
   e.target.reset();
+
+  fecharForm();
+
 });
 
 document.getElementById("filtroStatus")?.addEventListener("change", render);
 
 const fab = document.getElementById("fab");
-const formContainer = document.getElementById("form-container");
 
-if (fab && formContainer) {
-  fab.onclick = () => {
-    formContainer.style.display = "block";
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-
-    cliente.focus();
-  };
+if (fab) {
+  fab.onclick = abrirForm;
 }
 
 function fecharForm() {
