@@ -195,8 +195,7 @@ function renderMobile() {
   const lista = document.createElement("div");
 
   const select = document.getElementById("filtroStatus");
-  const statusSelecionado = select?.value || "entrada";
-
+  
   currentStatusIndex = flow.indexOf(statusSelecionado);
 
   servicos
