@@ -187,16 +187,17 @@ function renderMobile() {
   const titulo = document.createElement("h2");
   titulo.innerText = formatarStatus(flow[currentStatusIndex]);
   titulo.style.margin = "10px 0";
+  titulo.style.textAlign = "center";
+  titulo.style.width = "100%";
 
   kanban.appendChild(titulo);
 
-  const statusSelecionado = document.getElementById("filtroStatus")?.value || "entrada";
-
   const lista = document.createElement("div");
+lista.style.width = "100%";
 
-  const select = document.getElementById("filtroStatus");
-  
-  currentStatusIndex = flow.indexOf(statusSelecionado);
+const statusSelecionado = flow[currentStatusIndex];
+
+currentStatusIndex = flow.indexOf(statusSelecionado);
 
   servicos
     .filter(s => (s.status || "entrada") === statusSelecionado)
