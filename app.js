@@ -9,6 +9,20 @@ const flow = [
   "entregue"
 ];
 
+const SERVICOS = [
+  { nome: "Regulagem geral", preco: 150 },
+  { nome: "Troca de cordas", preco: 40 },
+  { nome: "Ajuste de tensor", preco: 80 },
+  { nome: "Nivelamento de trastes", preco: 250 },
+  { nome: "Polimento de trastes", preco: 120 },
+  { nome: "Colagem de cavalete", preco: 180 },
+  { nome: "Colagem de trinca", preco: 200 },
+  { nome: "Troca de pestana", preco: 100 },
+  { nome: "Hidratação da escala", preco: 60 },
+  { nome: "Limpeza geral", preco: 50 }
+];
+
+
 let editingId = null;
 let servicos = [];
 let currentStatusIndex = 0;
@@ -31,6 +45,19 @@ function isMobile() {
 function uid() {
   return "OS-" + Date.now().toString().slice(-5);
 }
+
+function renderChecklist() {
+  const container = document.getElementById("checklist-servicos");
+
+  container.innerHTML = SERVICOS.map(s => `
+    <label style="display:block; margin-bottom:4px;">
+      <input type="checkbox" value="${s.nome}">
+      ${s.nome}
+    </label>
+  `).join("");
+}
+
+renderChecklist();
 
 // 🔹 carregar dados
 async function load() {
@@ -153,25 +180,52 @@ function renderKanban() {
         div.style.borderLeft = `5px solid ${corStatus(statusColuna)}`;
 
         div.innerHTML = `
-          <b>${s.cliente}</b><br>
-          ${s.instrumento}<br>
-          <small>${s.problema}</small><br>
+  <b>${s.cliente}</b><br>
+  ${s.instrumento}<br>
 
-          ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+  ${s.servicos?.length ? `
+  <div style="margin:6px 0; display:flex; flex-wrap:wrap; gap:4px;">
+    ${s.servicos.map(serv => `
+      <span style="
+        font-size:11px;
+        background:#f1f1f1;
+        padding:4px 6px;
+        border-radius:6px;
+      ">
+        ${serv}
+      </span>
+    `).join("")}
+  </div>
+` : ""}
 
-          <small style="color:${pagamento === "pago" ? "green" : "red"}">
-            ${pagamento === "pago" ? "Pago" : "Pendente"}
-          </small><br>
+  ${s.problema ? `
+  <div style="
+    margin-top:6px;
+    font-size:12px;
+    background:#fafafa;
+    padding:6px 8px;
+    border-radius:8px;
+    color:#555;
+  ">
+    📝 ${s.problema}
+  </div>
+` : ""}
 
-          <button onclick="togglePagamento('${s.id}')">💰</button>
+  ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
 
-          <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">
-            📲
-          </a>
+  <small style="color:${pagamento === "pago" ? "green" : "red"}">
+    ${pagamento === "pago" ? "Pago" : "Pendente"}
+  </small><br>
 
-          <button onclick="editar('${s.id}')">✏️</button>
-          <button onclick="avancarStatus('${s.id}')">➡️</button>
-        `;
+  <button onclick="togglePagamento('${s.id}')">💰</button>
+
+  <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">
+    📲
+  </a>
+
+  <button onclick="editar('${s.id}')">✏️</button>
+  <button onclick="avancarStatus('${s.id}')">➡️</button>
+`;
 
         coluna.appendChild(div);
       });
@@ -228,7 +282,33 @@ function renderMobile() {
     </div>
   </div>
 
-  <div class="problema">${s.problema}</div>
+${s.servicos?.length ? `
+  <div style="margin:6px 0; display:flex; flex-wrap:wrap; gap:4px;">
+    ${s.servicos.map(serv => `
+      <span style="
+        font-size:11px;
+        background:#f1f1f1;
+        padding:4px 6px;
+        border-radius:6px;
+      ">
+        ${serv}
+      </span>
+    `).join("")}
+  </div>
+` : ""}
+
+   ${s.problema ? `
+  <div style="
+    margin-top:6px;
+    font-size:12px;
+    background:#fafafa;
+    padding:6px 8px;
+    border-radius:8px;
+    color:#555;
+  ">
+    📝 ${s.problema}
+  </div>
+` : ""}
 
   ${s.orcamento ? `
     <div class="orcamento">💰 R$ ${s.orcamento}</div>
@@ -276,7 +356,19 @@ function editar(id) {
 document.getElementById("form").addEventListener("submit", async e => {
   e.preventDefault();
 
+  // ✅ pegar checklist
+  const checks = document.querySelectorAll("#checklist-servicos input:checked");
+  const servicosSelecionados = Array.from(checks).map(c => c.value);
 
+  // 💰 calcular total automático
+  let valorTotal = 0;
+
+  servicosSelecionados.forEach(nome => {
+    const serv = SERVICOS.find(s => s.nome === nome);
+    if (serv) valorTotal += serv.preco;
+  });
+
+  const valorFinal = document.getElementById("orcamento").value || valorTotal;
 
   if (editingId) {
     const idx = servicos.findIndex(s => s.id === editingId);
@@ -287,22 +379,25 @@ document.getElementById("form").addEventListener("submit", async e => {
       telefone: document.getElementById("telefone").value,
       instrumento: document.getElementById("instrumento").value,
       problema: document.getElementById("problema").value,
+      servicos: servicosSelecionados,
       status: servicos[idx].status || "entrada",
-      orcamento: document.getElementById("orcamento").value,
+      orcamento: valorFinal,
       pagamento: document.getElementById("pagamento").value
     };
+
     editingId = null;
 
   } else {
     const novo = {
       id: uid(),
-      cliente: cliente.value,
-      telefone: telefone.value,
-      instrumento: instrumento.value,
-      problema: problema.value,
+      cliente: document.getElementById("cliente").value,
+      telefone: document.getElementById("telefone").value,
+      instrumento: document.getElementById("instrumento").value,
+      problema: document.getElementById("problema").value,
+      servicos: servicosSelecionados,
       status: "entrada",
-      orcamento: orcamento.value || "",
-      pagamento: pagamento.value || "pendente",
+      orcamento: valorFinal,
+      pagamento: document.getElementById("pagamento").value || "pendente",
       data: new Date().toISOString()
     };
 
@@ -314,7 +409,6 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   e.target.reset();
   fecharForm();
-
 });
 
 document.getElementById("filtroStatus")?.addEventListener("change", render);
@@ -325,9 +419,6 @@ if (fab) {
   fab.onclick = abrirForm;
 }
 
-function fecharForm() {
-  formContainer.style.display = "none";
-}
 
 function mudarStatusDirecao(direcao) {
   currentStatusIndex += direcao;
@@ -344,6 +435,7 @@ function mudarStatusDirecao(direcao) {
 
   render();
 }
+
 
 let startX = 0;
 
