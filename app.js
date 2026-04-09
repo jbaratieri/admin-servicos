@@ -193,11 +193,11 @@ function renderMobile() {
   kanban.appendChild(titulo);
 
   const lista = document.createElement("div");
-lista.style.width = "100%";
+  lista.style.width = "100%";
 
-const statusSelecionado = flow[currentStatusIndex];
+  const statusSelecionado = flow[currentStatusIndex];
 
-currentStatusIndex = flow.indexOf(statusSelecionado);
+  currentStatusIndex = flow.indexOf(statusSelecionado);
 
   servicos
     .filter(s => (s.status || "entrada") === statusSelecionado)
@@ -261,7 +261,6 @@ function editar(id) {
   document.getElementById("telefone").value = s.telefone || "";
   document.getElementById("instrumento").value = s.instrumento || "";
   document.getElementById("problema").value = s.problema || "";
-  document.getElementById("status").value = s.status || "entrada";
   document.getElementById("orcamento").value = s.orcamento || "";
   document.getElementById("pagamento").value = s.pagamento || "pendente";
 
@@ -277,22 +276,21 @@ function editar(id) {
 document.getElementById("form").addEventListener("submit", async e => {
   e.preventDefault();
 
-  formContainer.style.display = "none";
+
 
   if (editingId) {
     const idx = servicos.findIndex(s => s.id === editingId);
 
     servicos[idx] = {
       ...servicos[idx],
-      cliente: cliente.value,
-      telefone: telefone.value,
-      instrumento: instrumento.value,
-      problema: problema.value,
-      status: status.value,
-      orcamento: orcamento.value,
-      pagamento: pagamento.value
+      cliente: document.getElementById("cliente").value,
+      telefone: document.getElementById("telefone").value,
+      instrumento: document.getElementById("instrumento").value,
+      problema: document.getElementById("problema").value,
+      status: servicos[idx].status || "entrada",
+      orcamento: document.getElementById("orcamento").value,
+      pagamento: document.getElementById("pagamento").value
     };
-
     editingId = null;
 
   } else {
@@ -312,9 +310,9 @@ document.getElementById("form").addEventListener("submit", async e => {
   }
 
   await save();
-  load();
-  e.target.reset();
+  await load();
 
+  e.target.reset();
   fecharForm();
 
 });
