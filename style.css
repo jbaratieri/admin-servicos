@@ -253,3 +253,23 @@
     display: block;
   }
 }
+
+button[type="submit"] {
+  background: #27ae60;
+  color: #fff;
+  font-weight: bold;
+}
+
+button[type="submit"]:active {
+  background: #219150;
+  transform: scale(0.96);
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+#checklist-servicos input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}

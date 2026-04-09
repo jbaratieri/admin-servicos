@@ -22,10 +22,10 @@ const SERVICOS = [
   { nome: "Limpeza geral", preco: 50 }
 ];
 
-
 let editingId = null;
 let servicos = [];
 let currentStatusIndex = 0;
+let valorManual = false;
 
 const formContainer = document.getElementById("form-container");
 
@@ -41,23 +41,82 @@ function isMobile() {
   return window.innerWidth < 768;
 }
 
-// 🔹 gerar ID
+
 function uid() {
   return "OS-" + Date.now().toString().slice(-5);
 }
 
+function mudarStatusDirecao(direcao) {
+  currentStatusIndex += direcao;
+
+  if (currentStatusIndex < 0) currentStatusIndex = 0;
+  if (currentStatusIndex >= flow.length) currentStatusIndex = flow.length - 1;
+
+  render();
+}
+
+// 🔹 RENDER CHECKLIST + EVENTO
 function renderChecklist() {
   const container = document.getElementById("checklist-servicos");
 
   container.innerHTML = SERVICOS.map(s => `
-    <label style="display:block; margin-bottom:4px;">
-      <input type="checkbox" value="${s.nome}">
-      ${s.nome}
-    </label>
-  `).join("");
+  <label style="
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:6px;
+    cursor:pointer;
+  ">
+    <input type="checkbox" value="${s.nome}" style="margin:0;">
+    <span>${s.nome} (R$ ${s.preco})</span>
+  </label>
+`).join("");
+
+  // 🔥 evento automático de soma
+  container.querySelectorAll("input").forEach(input => {
+    input.addEventListener("change", calcularTotalChecklist);
+  });
 }
 
-renderChecklist();
+// 🔹 calcular total automaticamente
+function calcularTotalChecklist() {
+  const campo = document.getElementById("orcamento");
+
+  // 👉 só bloqueia se usuário digitou algo DIFERENTE do automático
+  if (valorManual && campo.dataset.manual === "true") return;
+
+}
+
+const checks = document.querySelectorAll("#checklist-servicos input:checked");
+
+let total = 0;
+
+checks.forEach(c => {
+  const serv = SERVICOS.find(s => s.nome === c.value);
+  if (serv) total += serv.preco;
+});
+
+document.getElementById("orcamento").value = total;
+
+
+// 🔹 marcar serviços ao editar
+function preencherChecklistSelecionado(lista) {
+  const inputs = document.querySelectorAll("#checklist-servicos input");
+
+  inputs.forEach(input => {
+    input.checked = lista?.includes(input.value) || false;
+  });
+}
+
+// 🔹 detectar edição manual
+document.getElementById("orcamento").addEventListener("input", (e) => {
+  valorManual = true;
+  e.target.dataset.manual = "true";
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  renderChecklist();
+});
 
 // 🔹 carregar dados
 async function load() {
@@ -74,7 +133,6 @@ async function save() {
   });
 }
 
-// 🎨 cor por status
 function corStatus(status) {
   switch (status) {
     case "entrada": return "#999";
@@ -87,16 +145,13 @@ function corStatus(status) {
   }
 }
 
-// 🔁 próximo status
 function nextStatus(current) {
   const idx = flow.indexOf(current);
   return flow[idx + 1] || current;
 }
 
-// 🚀 avançar status
 async function avancarStatus(id) {
   const idx = servicos.findIndex(s => s.id === id);
-
   const atual = servicos[idx].status || "entrada";
   servicos[idx].status = nextStatus(atual);
 
@@ -104,59 +159,6 @@ async function avancarStatus(id) {
   render();
 }
 
-// 💰 alternar pagamento
-async function togglePagamento(id) {
-  const idx = servicos.findIndex(s => s.id === id);
-
-  const atual = servicos[idx].pagamento || "pendente";
-  servicos[idx].pagamento = atual === "pago" ? "pendente" : "pago";
-
-  await save();
-  render();
-}
-
-// 📲 WhatsApp
-function gerarLinkWhatsApp(telefone, nome, status, valor) {
-  if (!telefone) return "#";
-
-  const numero = telefone.replace(/\D/g, "");
-  const v = valor || "0";
-
-  let mensagem = "";
-
-  switch (status) {
-    case "orcamento":
-      mensagem = `Olá ${nome}, seu orçamento ficou em R$ ${v}. Podemos prosseguir?`;
-      break;
-
-    case "pronto":
-      mensagem = `Olá ${nome}, seu instrumento está pronto 🎸 Valor: R$ ${v}`;
-      break;
-
-    default:
-      mensagem = `Olá ${nome}`;
-  }
-
-  return `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
-}
-
-// 🔤 formatar nome do status
-function formatarStatus(status) {
-  return status
-    .replace("_", " ")
-    .replace(/\b\w/g, l => l.toUpperCase());
-}
-
-function render() {
-  if (isMobile()) {
-    renderMobile();
-  } else {
-    renderKanban();
-  }
-}
-
-
-// 🧠 renderizar kanban
 function renderKanban() {
   const kanban = document.getElementById("kanban");
   kanban.innerHTML = "";
@@ -180,52 +182,30 @@ function renderKanban() {
         div.style.borderLeft = `5px solid ${corStatus(statusColuna)}`;
 
         div.innerHTML = `
-  <b>${s.cliente}</b><br>
-  ${s.instrumento}<br>
+          <b>${s.cliente}</b><br>
+          ${s.instrumento}<br>
 
-  ${s.servicos?.length ? `
-  <div style="margin:6px 0; display:flex; flex-wrap:wrap; gap:4px;">
-    ${s.servicos.map(serv => `
-      <span style="
-        font-size:11px;
-        background:#f1f1f1;
-        padding:4px 6px;
-        border-radius:6px;
-      ">
-        ${serv}
-      </span>
-    `).join("")}
-  </div>
-` : ""}
+          ${s.servicos?.length ? `
+            <div style="margin:6px 0; display:flex; flex-wrap:wrap; gap:4px;">
+              ${s.servicos.map(serv => `
+                <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
+                  ${serv}
+                </span>
+              `).join("")}
+            </div>
+          ` : ""}
 
-  ${s.problema ? `
-  <div style="
-    margin-top:6px;
-    font-size:12px;
-    background:#fafafa;
-    padding:6px 8px;
-    border-radius:8px;
-    color:#555;
-  ">
-    📝 ${s.problema}
-  </div>
-` : ""}
+          ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
 
-  ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+          <small style="color:${pagamento === "pago" ? "green" : "red"}">
+            ${pagamento === "pago" ? "Pago" : "Pendente"}
+          </small><br>
 
-  <small style="color:${pagamento === "pago" ? "green" : "red"}">
-    ${pagamento === "pago" ? "Pago" : "Pendente"}
-  </small><br>
-
-  <button onclick="togglePagamento('${s.id}')">💰</button>
-
-  <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">
-    📲
-  </a>
-
-  <button onclick="editar('${s.id}')">✏️</button>
-  <button onclick="avancarStatus('${s.id}')">➡️</button>
-`;
+          <button onclick="togglePagamento('${s.id}')">💰</button>
+          <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">📲</a>
+          <button onclick="editar('${s.id}')">✏️</button>
+          <button onclick="avancarStatus('${s.id}')">➡️</button>
+        `;
 
         coluna.appendChild(div);
       });
@@ -235,23 +215,21 @@ function renderKanban() {
 }
 
 function renderMobile() {
+
+  currentStatusIndex = Math.max(0, Math.min(currentStatusIndex, flow.length - 1));
   const kanban = document.getElementById("kanban");
   kanban.innerHTML = "";
 
+  const statusSelecionado = flow[currentStatusIndex];
+
   const titulo = document.createElement("h2");
-  titulo.innerText = formatarStatus(flow[currentStatusIndex]);
-  titulo.style.margin = "10px 0";
+  titulo.innerText = formatarStatus(statusSelecionado);
   titulo.style.textAlign = "center";
-  titulo.style.width = "100%";
+  titulo.style.margin = "10px 0";
 
   kanban.appendChild(titulo);
 
   const lista = document.createElement("div");
-  lista.style.width = "100%";
-
-  const statusSelecionado = flow[currentStatusIndex];
-
-  currentStatusIndex = flow.indexOf(statusSelecionado);
 
   servicos
     .filter(s => (s.status || "entrada") === statusSelecionado)
@@ -262,78 +240,84 @@ function renderMobile() {
 
       const div = document.createElement("div");
       div.className = "card";
-      if (s.status !== "entregue") {
-        div.style.background = "#fff9e6";
-      }
-
-      if (s.status === "pronto") {
-        div.style.background = "#e8f8f5";
-      }
 
       div.innerHTML = `
-  <div class="card-topo">
-    <div>
-      <div class="cliente">${s.cliente}</div>
-      <div class="instrumento">${s.instrumento}</div>
-    </div>
+        <b>${s.cliente}</b><br>
+        ${s.instrumento}<br>
 
-    <div class="status-tag" style="background:${corStatus(s.status)}">
-      ${formatarStatus(s.status)}
-    </div>
-  </div>
+        ${s.servicos?.length ? `
+          <div style="margin:6px 0; display:flex; flex-wrap:wrap; gap:4px;">
+            ${s.servicos.map(serv => `
+              <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
+                ${serv}
+              </span>
+            `).join("")}
+          </div>
+        ` : ""}
 
-${s.servicos?.length ? `
-  <div style="margin:6px 0; display:flex; flex-wrap:wrap; gap:4px;">
-    ${s.servicos.map(serv => `
-      <span style="
-        font-size:11px;
-        background:#f1f1f1;
-        padding:4px 6px;
-        border-radius:6px;
-      ">
-        ${serv}
-      </span>
-    `).join("")}
-  </div>
-` : ""}
+        ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
 
-   ${s.problema ? `
-  <div style="
-    margin-top:6px;
-    font-size:12px;
-    background:#fafafa;
-    padding:6px 8px;
-    border-radius:8px;
-    color:#555;
-  ">
-    📝 ${s.problema}
-  </div>
-` : ""}
+        <small style="color:${pagamento === "pago" ? "green" : "red"}">
+          ${pagamento === "pago" ? "Pago" : "Pendente"}
+        </small><br>
 
-  ${s.orcamento ? `
-    <div class="orcamento">💰 R$ ${s.orcamento}</div>
-  ` : ""}
+        <button onclick="togglePagamento('${s.id}')">💰</button>
+        <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">📲</a>
+        <button onclick="editar('${s.id}')">✏️</button>
+        <button onclick="avancarStatus('${s.id}')">➡️</button>
+      `;
 
-  <div class="rodape">
-    <div class="pagamento ${pagamento === "pago" ? "pago" : "pendente"}">
-      ${pagamento === "pago" ? "Pago" : "Pendente"}
-    </div>
-  </div>
-
-  <div class="acoes">
-    <button onclick="togglePagamento('${s.id}')">💰</button>
-    <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">📲</a>
-    <button onclick="editar('${s.id}')">✏️</button>
-    <button onclick="avancarStatus('${s.id}')">➡️</button>
-  </div>
-`;
       lista.appendChild(div);
     });
 
   kanban.appendChild(lista);
 }
 
-// ✏️ editar
+async function togglePagamento(id) {
+  const idx = servicos.findIndex(s => s.id === id);
+  const atual = servicos[idx].pagamento || "pendente";
+
+  servicos[idx].pagamento = atual === "pago" ? "pendente" : "pago";
+
+  await save();
+  render();
+}
+
+function gerarLinkWhatsApp(telefone, nome, status, valor) {
+  if (!telefone) return "#";
+
+  const numero = telefone.replace(/\D/g, "");
+  const v = valor || "0";
+
+  let mensagem = "";
+
+  switch (status) {
+    case "orcamento":
+      mensagem = `Olá ${nome}, seu orçamento ficou em R$ ${v}. Podemos prosseguir?`;
+      break;
+    case "pronto":
+      mensagem = `Olá ${nome}, seu instrumento está pronto 🎸 Valor: R$ ${v}`;
+      break;
+    default:
+      mensagem = `Olá ${nome}`;
+  }
+
+  return `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
+}
+
+function formatarStatus(status) {
+  return status.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function render() {
+  if (isMobile()) {
+    renderMobile();
+  } else {
+    renderKanban();
+  }
+}
+
+// ✏️ EDITAR (AGORA COM CHECKLIST CORRETO)
 function editar(id) {
   const s = servicos.find(x => x.id === id);
 
@@ -344,23 +328,25 @@ function editar(id) {
   document.getElementById("orcamento").value = s.orcamento || "";
   document.getElementById("pagamento").value = s.pagamento || "pendente";
 
+  // 🔥 AQUI ESTÁ O SEGREDO
+  preencherChecklistSelecionado(s.servicos);
+
+  valorManual = false;
+  document.getElementById("orcamento").dataset.manual = "false";
+
   editingId = id;
 
-  // 👉 abre o formulário (AGORA FUNCIONA COM SEU NOVO MODAL)
   abrirForm();
-
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// 🧾 salvar formulário
+// 🧾 SALVAR
 document.getElementById("form").addEventListener("submit", async e => {
   e.preventDefault();
 
-  // ✅ pegar checklist
   const checks = document.querySelectorAll("#checklist-servicos input:checked");
   const servicosSelecionados = Array.from(checks).map(c => c.value);
 
-  // 💰 calcular total automático
   let valorTotal = 0;
 
   servicosSelecionados.forEach(nome => {
@@ -368,7 +354,9 @@ document.getElementById("form").addEventListener("submit", async e => {
     if (serv) valorTotal += serv.preco;
   });
 
-  const valorFinal = document.getElementById("orcamento").value || valorTotal;
+  const valorFinal = valorManual
+    ? document.getElementById("orcamento").value
+    : valorTotal;
 
   if (editingId) {
     const idx = servicos.findIndex(s => s.id === editingId);
@@ -380,7 +368,6 @@ document.getElementById("form").addEventListener("submit", async e => {
       instrumento: document.getElementById("instrumento").value,
       problema: document.getElementById("problema").value,
       servicos: servicosSelecionados,
-      status: servicos[idx].status || "entrada",
       orcamento: valorFinal,
       pagamento: document.getElementById("pagamento").value
     };
@@ -404,58 +391,62 @@ document.getElementById("form").addEventListener("submit", async e => {
     servicos.push(novo);
   }
 
-  await save();
-  await load();
+  valorManual = false;
 
-  e.target.reset();
-  fecharForm();
+const btn = e.target.querySelector("button[type='submit']");
+
+btn.innerText = "Salvando...";
+btn.disabled = true;
+
+await save();
+await load(); // 🔥 espera tudo terminar antes
+
+btn.innerText = "Salvo!";
+
+setTimeout(() => {
+  btn.disabled = false;
+  btn.innerText = "Salvar";
+}, 800);
+
+e.target.reset();
+fecharForm();
+window.scrollTo({ top: 0, behavior: "smooth" });
+
 });
-
-document.getElementById("filtroStatus")?.addEventListener("change", render);
-
-const fab = document.getElementById("fab");
-
-if (fab) {
-  fab.onclick = abrirForm;
-}
-
-
-function mudarStatusDirecao(direcao) {
-  currentStatusIndex += direcao;
-
-  if (currentStatusIndex < 0) currentStatusIndex = 0;
-  if (currentStatusIndex >= flow.length) currentStatusIndex = flow.length - 1;
-
-  const novoStatus = flow[currentStatusIndex];
-
-  const select = document.getElementById("filtroStatus");
-  if (select) {
-    select.value = novoStatus;
-  }
-
-  render();
-}
-
 
 let startX = 0;
+let endX = 0;
+let isSwiping = false;
 
 document.addEventListener("touchstart", e => {
+  // ❌ ignorar cliques em botões/links
+  if (e.target.closest("button, a")) return;
+
   startX = e.touches[0].clientX;
+  isSwiping = true;
 });
 
-document.addEventListener("touchend", e => {
-  const endX = e.changedTouches[0].clientX;
+document.addEventListener("touchmove", e => {
+  if (!isSwiping) return;
+  endX = e.touches[0].clientX;
+});
+
+document.addEventListener("touchend", () => {
+  if (!isSwiping) return;
+
   const diff = endX - startX;
 
-  if (Math.abs(diff) > 80) {
+  if (Math.abs(diff) > 60) {
     if (diff > 0) {
-      // 👉 arrastou pra direita
       mudarStatusDirecao(-1);
     } else {
-      // 👉 arrastou pra esquerda
       mudarStatusDirecao(1);
     }
   }
+
+  isSwiping = false;
+  startX = 0;
+  endX = 0;
 });
 
 // 🚀 iniciar
