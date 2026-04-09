@@ -116,6 +116,10 @@ document.getElementById("orcamento").addEventListener("input", (e) => {
 
 window.addEventListener("DOMContentLoaded", () => {
   renderChecklist();
+  const fab = document.getElementById("fab");
+  if (fab) {
+    fab.onclick = abrirForm;
+  }
 });
 
 // 🔹 carregar dados
