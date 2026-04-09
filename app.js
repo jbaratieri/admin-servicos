@@ -11,6 +11,7 @@ const flow = [
 
 let editingId = null;
 let servicos = [];
+let currentStatusIndex = 0;
 
 const formContainer = document.getElementById("form-container");
 
@@ -183,9 +184,20 @@ function renderMobile() {
   const kanban = document.getElementById("kanban");
   kanban.innerHTML = "";
 
+  const titulo = document.createElement("h2");
+  titulo.innerText = formatarStatus(flow[currentStatusIndex]);
+  titulo.style.margin = "10px 0";
+
+  kanban.appendChild(titulo);
+
   const statusSelecionado = document.getElementById("filtroStatus")?.value || "entrada";
 
   const lista = document.createElement("div");
+
+  const select = document.getElementById("filtroStatus");
+  const statusSelecionado = select?.value || "entrada";
+
+  currentStatusIndex = flow.indexOf(statusSelecionado);
 
   servicos
     .filter(s => (s.status || "entrada") === statusSelecionado)
@@ -245,15 +257,18 @@ function renderMobile() {
 function editar(id) {
   const s = servicos.find(x => x.id === id);
 
-  cliente.value = s.cliente;
-  telefone.value = s.telefone;
-  instrumento.value = s.instrumento;
-  problema.value = s.problema;
-  status.value = s.status || "entrada";
-  orcamento.value = s.orcamento || "";
-  pagamento.value = s.pagamento || "pendente";
+  document.getElementById("cliente").value = s.cliente || "";
+  document.getElementById("telefone").value = s.telefone || "";
+  document.getElementById("instrumento").value = s.instrumento || "";
+  document.getElementById("problema").value = s.problema || "";
+  document.getElementById("status").value = s.status || "entrada";
+  document.getElementById("orcamento").value = s.orcamento || "";
+  document.getElementById("pagamento").value = s.pagamento || "pendente";
 
   editingId = id;
+
+  // 👉 abre o formulário (AGORA FUNCIONA COM SEU NOVO MODAL)
+  abrirForm();
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -315,6 +330,43 @@ if (fab) {
 function fecharForm() {
   formContainer.style.display = "none";
 }
+
+function mudarStatusDirecao(direcao) {
+  currentStatusIndex += direcao;
+
+  if (currentStatusIndex < 0) currentStatusIndex = 0;
+  if (currentStatusIndex >= flow.length) currentStatusIndex = flow.length - 1;
+
+  const novoStatus = flow[currentStatusIndex];
+
+  const select = document.getElementById("filtroStatus");
+  if (select) {
+    select.value = novoStatus;
+  }
+
+  render();
+}
+
+let startX = 0;
+
+document.addEventListener("touchstart", e => {
+  startX = e.touches[0].clientX;
+});
+
+document.addEventListener("touchend", e => {
+  const endX = e.changedTouches[0].clientX;
+  const diff = endX - startX;
+
+  if (Math.abs(diff) > 80) {
+    if (diff > 0) {
+      // 👉 arrastou pra direita
+      mudarStatusDirecao(-1);
+    } else {
+      // 👉 arrastou pra esquerda
+      mudarStatusDirecao(1);
+    }
+  }
+});
 
 // 🚀 iniciar
 load();
