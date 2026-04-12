@@ -1,8 +1,8 @@
+body {
+  font-family: Arial;
+  padding: 20px;
+}
 
-  body {
-    font-family: Arial;
-    padding: 20px;
-  }
 #form-container {
   position: fixed;
   top: 0;
@@ -78,62 +78,63 @@
   color: #fff;
 }
 
-  input,
-  select {
-    margin: 5px;
-    padding: 8px;
-    width: 100%;
-  }
+input,
+select {
+  margin: 5px;
+  padding: 8px;
+  width: 100%;
+}
 
-  button {
-    padding: 10px;
-    margin-top: 10px;
-  }
+button {
+  padding: 10px;
+  margin-top: 10px;
+}
 
-  .card {
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-top: 10px;
-  }
 
-  .kanban {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-  }
 
-  .coluna {
-    min-width: 250px;
-    background: #f4f4f4;
-    padding: 10px;
-    border-radius: 8px;
-  }
 
-  .coluna h3 {
-    margin-top: 0;
-    font-size: 16px;
-  }
+.card:hover {
+  transform: translateY(-2px);
+}
 
-  .card {
-    background: white;
-  padding: 12px;
+
+.kanban {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.coluna {
+  min-width: 250px;
+  background: #f4f4f4;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.coluna h3 {
+  margin-top: 0;
+  font-size: 16px;
+}
+
+.card {
+  background: white;
+  padding: 10px;
   margin-bottom: 12px;
-  border-radius: 12px;   padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 6px;
-    border-left: 5px solid #ccc;
-  }
+  margin-top: 10px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 5px solid #ccc;
+  transition: 0.2s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
 
 
-  button,
-  a {
-    font-size: 18px;
-    padding: 8px;
-  }
-
-  .card {
-    margin-bottom: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+button,
+a {
+  font-size: 18px;
+  padding: 8px;
 }
 
 .card button,
@@ -144,6 +145,18 @@
   border-radius: 10px;
 }
 
+.card button {
+  border: none;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  background: #f1f1f1;
+}
+
+.card button:hover {
+  background: #e0e0e0;
+}
+
 #filtroStatus {
   width: 100%;
   padding: 12px;
@@ -151,13 +164,8 @@
   font-size: 16px;
   border-radius: 8px;
 }
-.card {
-  padding: 14px;
-  margin-bottom: 14px;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-}
+
+
 
 /* topo */
 .card-topo {
@@ -245,7 +253,7 @@
   font-size: 18px;
   background: #27ae60;
   color: #fff;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 @media (max-width: 768px) {
@@ -272,4 +280,54 @@ button {
 #checklist-servicos input[type="checkbox"] {
   width: 16px;
   height: 16px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 15px 10px;
+}
+
+.toolbar select {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.toolbar button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #6b4f3a;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.toolbar button:hover {
+  background: #5a3f2d;
+}
+
+.topo-arquivados {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.btn-voltar {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: #eee;
+  cursor: pointer;
+  font-weight: 500;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+}
+
+.btn-voltar:hover {
+  background: #ddd;
 }

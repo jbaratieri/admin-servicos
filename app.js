@@ -156,11 +156,21 @@ function nextStatus(current) {
 
 async function avancarStatus(id) {
   const idx = servicos.findIndex(s => s.id === id);
+
+  if (idx === -1) return;
+
   const atual = servicos[idx].status || "entrada";
   servicos[idx].status = nextStatus(atual);
 
-  await save();
+  // 🔥 atualiza na hora (sem delay)
   render();
+
+  try {
+    await save();
+  } catch (e) {
+    alert("Erro ao salvar");
+    await load(); // restaura se der erro
+  }
 }
 
 function renderKanban() {
@@ -175,6 +185,7 @@ function renderKanban() {
     coluna.innerHTML = `<h3>${formatarStatus(statusColuna)}</h3>`;
 
     servicos
+      .filter(s => !s.arquivado)
       .filter(s => (s.status || "entrada") === statusColuna)
       .forEach(s => {
 
@@ -206,9 +217,16 @@ function renderKanban() {
           </small><br>
 
           <button onclick="togglePagamento('${s.id}')">💰</button>
-          <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">📲</a>
+          <button onclick="abrirWhatsApp('${s.telefone}', '${s.cliente}', '${s.status}', '${s.orcamento}')">
+  📲</button>
           <button onclick="editar('${s.id}')">✏️</button>
           <button onclick="avancarStatus('${s.id}')">➡️</button>
+          ${s.status !== "entregue" && s.pagamento !== "pago" ? `
+          <button onclick="excluirServico('${s.id}')">🗑️</button>
+` : ""}
+          ${s.status === "entregue" ? `
+          <button onclick="arquivarServico('${s.id}')">📦</button>
+` : ""}
         `;
 
         coluna.appendChild(div);
@@ -236,6 +254,7 @@ function renderMobile() {
   const lista = document.createElement("div");
 
   servicos
+    .filter(s => !s.arquivado)
     .filter(s => (s.status || "entrada") === statusSelecionado)
     .reverse()
     .forEach(s => {
@@ -266,9 +285,16 @@ function renderMobile() {
         </small><br>
 
         <button onclick="togglePagamento('${s.id}')">💰</button>
-        <a href="${gerarLinkWhatsApp(s.telefone, s.cliente, s.status, s.orcamento)}" target="_blank">📲</a>
+        <button onclick="abrirWhatsApp('${s.telefone}', '${s.cliente}', '${s.status}', '${s.orcamento}')">
+  📲</button>
         <button onclick="editar('${s.id}')">✏️</button>
         <button onclick="avancarStatus('${s.id}')">➡️</button>
+        ${s.status !== "entregue" && s.pagamento !== "pago" ? `
+        <button onclick="excluirServico('${s.id}')">🗑️</button>
+` : ""}
+        ${s.status === "entregue" ? `
+        <button onclick="arquivarServico('${s.id}')">📦</button>
+` : ""}
       `;
 
       lista.appendChild(div);
@@ -279,12 +305,100 @@ function renderMobile() {
 
 async function togglePagamento(id) {
   const idx = servicos.findIndex(s => s.id === id);
-  const atual = servicos[idx].pagamento || "pendente";
 
+  if (idx === -1) return;
+
+  const atual = servicos[idx].pagamento || "pendente";
   servicos[idx].pagamento = atual === "pago" ? "pendente" : "pago";
 
-  await save();
+  // 🔥 instantâneo
   render();
+
+  try {
+    await save();
+  } catch (e) {
+    alert("Erro ao salvar");
+    await load();
+  }
+}
+
+async function excluirServico(id) {
+  const servico = servicos.find(s => s.id === id);
+
+  // 🚫 bloqueios de segurança
+  if (servico?.status === "entregue") {
+    alert("Serviços já entregues não podem ser excluídos.");
+    return;
+  }
+
+  if (servico?.pagamento === "pago") {
+    alert("Serviços pagos não podem ser excluídos.");
+    return;
+  }
+
+  const confirmar = confirm("Excluir este serviço?");
+  if (!confirmar) return;
+
+  // remove e atualiza tela
+  servicos = servicos.filter(s => s.id !== id);
+  render();
+
+  try {
+    await save();
+  } catch (e) {
+    alert("Erro ao excluir");
+    await load(); // restaura se der erro
+  }
+}
+
+async function arquivarServico(id) {
+  const idx = servicos.findIndex(s => s.id === id);
+
+  if (idx === -1) return;
+
+  servicos[idx].arquivado = true;
+
+  // 🔥 some na hora
+  render();
+
+  try {
+    await save();
+  } catch (e) {
+    alert("Erro ao salvar");
+    await load();
+  }
+}
+
+function verArquivados() {
+  const kanban = document.getElementById("kanban");
+
+  const arquivados = servicos.filter(s => s.arquivado);
+
+  kanban.innerHTML = `
+  <div class="topo-arquivados">
+    <button class="btn-voltar" onclick="render()">← Voltar</button>
+    <h2>📦 Arquivados</h2>
+  </div>
+
+
+    ${arquivados.length === 0 ? "<p>Nenhum serviço arquivado.</p>" : ""}
+
+    ${arquivados.map(s => `
+      <div class="card">
+        <b>${s.cliente}</b><br>
+        ${s.instrumento}<br>
+        ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+        <small>${formatarStatus(s.status)}</small>
+      </div>
+    `).join("")}
+  `;
+}
+
+function abrirWhatsApp(telefone, nome, status, valor) {
+  const url = gerarLinkWhatsApp(telefone, nome, status, valor);
+  if (url !== "#") {
+    window.open(url, "_blank");
+  }
 }
 
 function gerarLinkWhatsApp(telefone, nome, status, valor) {
@@ -397,24 +511,24 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   valorManual = false;
 
-const btn = e.target.querySelector("button[type='submit']");
+  const btn = e.target.querySelector("button[type='submit']");
 
-btn.innerText = "Salvando...";
-btn.disabled = true;
+  btn.innerText = "Salvando...";
+  btn.disabled = true;
 
-await save();
-await load(); // 🔥 espera tudo terminar antes
+  await save();
+  await load(); // 🔥 espera tudo terminar antes
 
-btn.innerText = "Salvo!";
+  btn.innerText = "Salvo!";
 
-setTimeout(() => {
-  btn.disabled = false;
-  btn.innerText = "Salvar";
-}, 800);
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerText = "Salvar";
+  }, 800);
 
-e.target.reset();
-fecharForm();
-window.scrollTo({ top: 0, behavior: "smooth" });
+  e.target.reset();
+  fecharForm();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 
 });
 

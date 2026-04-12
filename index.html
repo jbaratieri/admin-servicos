@@ -47,16 +47,19 @@
   </div>
 
 
-  <select id="filtroStatus">
-    <option value="entrada">Entrada</option>
-    <option value="diagnostico">Diagnóstico</option>
-    <option value="orcamento">Orçamento</option>
-    <option value="em_andamento">Em andamento</option>
-    <option value="pronto">Pronto</option>
-    <option value="entregue">Entregue</option>
-  </select>
 
 
+  <div style="display:flex; gap:10px; margin:10px; align-items:center;">
+    <select id="filtroStatus">
+      <option value="entrada">Entrada</option>
+      <option value="diagnostico">Diagnóstico</option>
+      <option value="orcamento">Orçamento</option>
+      <option value="em_andamento">Em andamento</option>
+      <option value="pronto">Pronto</option>
+      <option value="entregue">Entregue</option>
+    </select>
+    <button onclick="verArquivados()">📦 Histórico</button>
+  </div>
 
   <h2>Serviços</h2>
   <div id="kanban" class="kanban"></div>
