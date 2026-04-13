@@ -372,10 +372,12 @@ function renderMobile() {
   </div>
 ` : ""}
 
-     ${s.orcamento ? `
+
+
+          ${s.orcamento ? `
   <div class="financeiro">
 
-    ${s.desconto ? `<div class="desconto">- Desconto: R$ ${s.desconto}</div>` : ""}
+  ${s.desconto ? `<div class="desconto">- Desconto: R$ ${s.desconto}</div>` : ""}
 
   <div class="total">
     Total: R$ ${s.orcamento}
