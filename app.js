@@ -257,9 +257,11 @@ function renderKanban() {
     </div>
     
     <!-- Extra destacado -->
-    <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
-      ${s.extraNome}
-    </span>
+    ${s.extraNome ? `
+  <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
+    ${s.extraNome}
+  </span>
+` : ""}
     
   </div>
 ` : ""}
@@ -306,7 +308,6 @@ function renderMobile() {
 
   currentStatusIndex = Math.max(0, Math.min(currentStatusIndex, flow.length - 1));
   const kanban = document.getElementById("kanban");
-  const base = (s.orcamento || 0)
 
 
   kanban.innerHTML = "";
@@ -364,10 +365,11 @@ function renderMobile() {
       ${s.extraValor ? `<span style="font-size:10px; color:#333;">R$ ${s.extraValor}</span>` : ""}
     </div>
     
-    <!-- Extra destacado -->
-    <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
-      ${s.extraNome}
-    </span>
+   ${s.extraNome ? `
+  <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
+    ${s.extraNome}
+  </span>
+` : ""}
     
   </div>
 ` : ""}
