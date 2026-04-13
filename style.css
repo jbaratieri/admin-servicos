@@ -206,6 +206,12 @@ a {
   font-weight: bold;
 }
 
+.valor {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 6px 0;
+}
+
 /* rodape */
 .rodape {
   margin-top: 6px;
@@ -330,4 +336,31 @@ button {
 
 .btn-voltar:hover {
   background: #ddd;
+}
+
+.detalhes-financeiros {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.desconto {
+  color: #c0392b;
+}
+
+.financeiro {
+  font-size: 12px;
+  color: #666;
+  margin: 6px 0;
+}
+
+.financeiro .total {
+  font-size: 16px;
+  font-weight: bold;
+  color: #000;
+  margin-top: 4px;
+}
+
+.desconto {
+  color: #c0392b;
 }

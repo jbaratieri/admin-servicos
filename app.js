@@ -10,16 +10,33 @@ const flow = [
 ];
 
 const SERVICOS = [
-  { nome: "Regulagem geral", preco: 150 },
+  { nome: "Troca e ajuste rastilho", preco: 80 },
+  { nome: "Troca de pestana (nut)", preco: 80 },
+  { nome: "Limpeza e Hidratação da escala", preco: 80 },
+  { nome: "Polimento e Nivelamento de trastes", preco: 150 },
+  { nome: "Colagem e regulagem de cavalete", preco: 120 },
+  { nome: "Ajuste Ação das cordas e oitavas", preco: 120 },
   { nome: "Troca de cordas", preco: 40 },
-  { nome: "Ajuste de tensor", preco: 80 },
-  { nome: "Nivelamento de trastes", preco: 250 },
-  { nome: "Polimento de trastes", preco: 120 },
-  { nome: "Colagem de cavalete", preco: 180 },
-  { nome: "Colagem de trinca", preco: 200 },
-  { nome: "Troca de pestana", preco: 100 },
-  { nome: "Hidratação da escala", preco: 60 },
-  { nome: "Limpeza geral", preco: 50 }
+  { nome: "Ajuste de tensor", preco: 60 },
+  { nome: "Colagem de trinca", preco: 100 },
+  { nome: "Colagem Braço/Headstock", preco: 200 },
+  { nome: "Regulagem geral", preco: 150 },
+  { nome: "Limpeza geral", preco: 50 },
+  {
+    nome: "Manutenção - Pacote Básico",
+    preco: 120,
+    desc: "Troca de cordas • Regulagem básica • Limpeza geral"
+  },
+  {
+    nome: "Manutenção - Pacote Completo",
+    preco: 220,
+    desc: "Setup completo • Hidratação • Polimento leve • Troca de cordas"
+  },
+  {
+    nome: "Manutenção - Pacote Premium",
+    preco: 320,
+    desc: "Setup avançado • Nivelamento trastes • Ajuste rastilho • Correções leves"
+  },
 ];
 
 let editingId = null;
@@ -68,7 +85,9 @@ function renderChecklist() {
     cursor:pointer;
   ">
     <input type="checkbox" value="${s.nome}" style="margin:0;">
-    <span>${s.nome} (R$ ${s.preco})</span>
+    <span title="${s.desc || ''}">
+  ${s.nome} (R$ ${s.preco})
+</span>
   </label>
 `).join("");
 
@@ -82,22 +101,27 @@ function renderChecklist() {
 function calcularTotalChecklist() {
   const campo = document.getElementById("orcamento");
 
-  // 👉 só bloqueia se usuário digitou algo DIFERENTE do automático
   if (valorManual && campo.dataset.manual === "true") return;
 
+  const checks = document.querySelectorAll("#checklist-servicos input:checked");
+
+  let total = 0;
+
+  checks.forEach(c => {
+    const serv = SERVICOS.find(s => s.nome === c.value);
+    if (serv) total += serv.preco;
+  });
+
+  // ➕ extra
+  const extra = Number(document.getElementById("extraValor").value) || 0;
+
+  // ➖ desconto
+  const desconto = Number(document.getElementById("desconto").value) || 0;
+
+  total = total + extra - desconto;
+
+  campo.value = total > 0 ? total : 0;
 }
-
-const checks = document.querySelectorAll("#checklist-servicos input:checked");
-
-let total = 0;
-
-checks.forEach(c => {
-  const serv = SERVICOS.find(s => s.nome === c.value);
-  if (serv) total += serv.preco;
-});
-
-document.getElementById("orcamento").value = total;
-
 
 // 🔹 marcar serviços ao editar
 function preencherChecklistSelecionado(lista) {
@@ -113,6 +137,9 @@ document.getElementById("orcamento").addEventListener("input", (e) => {
   valorManual = true;
   e.target.dataset.manual = "true";
 });
+
+document.getElementById("extraValor").addEventListener("input", calcularTotalChecklist);
+document.getElementById("desconto").addEventListener("input", calcularTotalChecklist);
 
 window.addEventListener("DOMContentLoaded", () => {
   renderChecklist();
@@ -175,7 +202,8 @@ async function avancarStatus(id) {
 
 function renderKanban() {
   const kanban = document.getElementById("kanban");
-  kanban.innerHTML = "";
+
+    kanban.innerHTML = "";
 
   flow.forEach(statusColuna => {
 
@@ -190,7 +218,10 @@ function renderKanban() {
       .forEach(s => {
 
         const pagamento = s.pagamento || "pendente";
-
+        const base = (s.orcamento || 0)
+          - (Number(s.extraValor) || 0)
+    + (Number(s.desconto) || 0);
+  
         const div = document.createElement("div");
         div.className = "card";
 
@@ -199,18 +230,53 @@ function renderKanban() {
         div.innerHTML = `
           <b>${s.cliente}</b><br>
           ${s.instrumento}<br>
+          
 
-          ${s.servicos?.length ? `
-            <div style="margin:6px 0; display:flex; flex-wrap:wrap; gap:4px;">
-              ${s.servicos.map(serv => `
-                <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
-                  ${serv}
-                </span>
-              `).join("")}
-            </div>
-          ` : ""}
+      ${s.servicos?.length ? `
+  <div style="margin:6px 0; display:flex; flex-direction:column; gap:6px;">
+    
+    <!-- Cabeçalho Serviços com valor -->
+    <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555;">
+      <span>Serviços</span>
+      ${base ? `<span style="font-size:10px; color:#333;">R$ ${base}</span>` : ""}
+    </div>
+    
+    <!-- Lista de serviços -->
+    <div style="display:flex; flex-wrap:wrap; gap:4px;">
+      ${s.servicos.map(serv => `
+        <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
+          ${serv}
+        </span>
+      `).join("")}
+    </div>
+    
+    <!-- Cabeçalho Extra com valor -->
+    <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555; margin-top:6px;">
+      <span>Extra</span>
+      ${s.extraValor ? `<span style="font-size:10px; color:#333;">R$ ${s.extraValor}</span>` : ""}
+    </div>
+    
+    <!-- Extra destacado -->
+    <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
+      ${s.extraNome}
+    </span>
+    
+  </div>
+` : ""}
 
-          ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+
+
+          ${s.orcamento ? `
+  <div class="financeiro">
+
+  ${s.desconto ? `<div class="desconto">- Desconto: R$ ${s.desconto}</div>` : ""}
+
+  <div class="total">
+    Total: R$ ${s.orcamento}
+  </div>
+
+</div>
+` : ""}
 
           <small style="color:${pagamento === "pago" ? "green" : "red"}">
             ${pagamento === "pago" ? "Pago" : "Pendente"}
@@ -240,6 +306,9 @@ function renderMobile() {
 
   currentStatusIndex = Math.max(0, Math.min(currentStatusIndex, flow.length - 1));
   const kanban = document.getElementById("kanban");
+  const base = (s.orcamento || 0)
+
+
   kanban.innerHTML = "";
 
   const statusSelecionado = flow[currentStatusIndex];
@@ -260,6 +329,9 @@ function renderMobile() {
     .forEach(s => {
 
       const pagamento = s.pagamento || "pendente";
+      const base = (s.orcamento || 0)
+    - (Number(s.extraValor) || 0)
+    + (Number(s.desconto) || 0);
 
       const div = document.createElement("div");
       div.className = "card";
@@ -268,17 +340,50 @@ function renderMobile() {
         <b>${s.cliente}</b><br>
         ${s.instrumento}<br>
 
-        ${s.servicos?.length ? `
-          <div style="margin:6px 0; display:flex; flex-wrap:wrap; gap:4px;">
-            ${s.servicos.map(serv => `
-              <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
-                ${serv}
-              </span>
-            `).join("")}
-          </div>
-        ` : ""}
+       ${s.servicos?.length ? `
+  <div style="margin:6px 0; display:flex; flex-direction:column; gap:6px;">
+    
+    <!-- Cabeçalho Serviços com valor -->
+    <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555;">
+      <span>Serviços</span>
+      ${base ? `<span style="font-size:10px; color:#333;">R$ ${base}</span>` : ""}
+    </div>
+    
+    <!-- Lista de serviços -->
+    <div style="display:flex; flex-wrap:wrap; gap:4px;">
+      ${s.servicos.map(serv => `
+        <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
+          ${serv}
+        </span>
+      `).join("")}
+    </div>
+    
+    <!-- Cabeçalho Extra com valor -->
+    <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555; margin-top:6px;">
+      <span>Extra</span>
+      ${s.extraValor ? `<span style="font-size:10px; color:#333;">R$ ${s.extraValor}</span>` : ""}
+    </div>
+    
+    <!-- Extra destacado -->
+    <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
+      ${s.extraNome}
+    </span>
+    
+  </div>
+` : ""}
 
-        ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+     ${s.orcamento ? `
+  <div class="financeiro">
+
+    ${s.desconto ? `<div class="desconto">- Desconto: R$ ${s.desconto}</div>` : ""}
+
+  <div class="total">
+    Total: R$ ${s.orcamento}
+  </div>
+
+</div>
+` : ""}
+
 
         <small style="color:${pagamento === "pago" ? "green" : "red"}">
           ${pagamento === "pago" ? "Pago" : "Pendente"}
@@ -387,7 +492,11 @@ function verArquivados() {
       <div class="card">
         <b>${s.cliente}</b><br>
         ${s.instrumento}<br>
-        ${s.orcamento ? `<strong>R$ ${s.orcamento}</strong><br>` : ""}
+        ${s.orcamento ? `
+  <div class="valor">
+    R$ ${s.orcamento}
+  </div>
+` : ""}
         <small>${formatarStatus(s.status)}</small>
       </div>
     `).join("")}
@@ -440,11 +549,19 @@ function editar(id) {
   const s = servicos.find(x => x.id === id);
 
   document.getElementById("cliente").value = s.cliente || "";
-  document.getElementById("telefone").value = s.telefone || "";
-  document.getElementById("instrumento").value = s.instrumento || "";
-  document.getElementById("problema").value = s.problema || "";
-  document.getElementById("orcamento").value = s.orcamento || "";
-  document.getElementById("pagamento").value = s.pagamento || "pendente";
+document.getElementById("telefone").value = s.telefone || "";
+document.getElementById("instrumento").value = s.instrumento || "";
+document.getElementById("problema").value = s.problema || "";
+document.getElementById("orcamento").value = s.orcamento || "";
+document.getElementById("pagamento").value = s.pagamento || "pendente";
+
+// ✅ NOVOS CAMPOS
+document.getElementById("extraNome").value = s.extraNome || "";
+document.getElementById("extraValor").value = s.extraValor || "";
+document.getElementById("desconto").value = s.desconto || "";
+
+// checklist
+preencherChecklistSelecionado(s.servicos);
 
   // 🔥 AQUI ESTÁ O SEGREDO
   preencherChecklistSelecionado(s.servicos);
@@ -462,6 +579,8 @@ function editar(id) {
 document.getElementById("form").addEventListener("submit", async e => {
   e.preventDefault();
 
+
+
   const checks = document.querySelectorAll("#checklist-servicos input:checked");
   const servicosSelecionados = Array.from(checks).map(c => c.value);
 
@@ -472,9 +591,12 @@ document.getElementById("form").addEventListener("submit", async e => {
     if (serv) valorTotal += serv.preco;
   });
 
-  const valorFinal = valorManual
-    ? document.getElementById("orcamento").value
-    : valorTotal;
+ const extra = Number(document.getElementById("extraValor").value) || 0;
+const desconto = Number(document.getElementById("desconto").value) || 0;
+
+const valorFinal = valorManual
+  ? Number(document.getElementById("orcamento").value)
+  : (valorTotal + extra - desconto);
 
   if (editingId) {
     const idx = servicos.findIndex(s => s.id === editingId);
@@ -487,7 +609,10 @@ document.getElementById("form").addEventListener("submit", async e => {
       problema: document.getElementById("problema").value,
       servicos: servicosSelecionados,
       orcamento: valorFinal,
-      pagamento: document.getElementById("pagamento").value
+      pagamento: document.getElementById("pagamento").value,
+      extraNome: document.getElementById("extraNome").value,
+      extraValor: Number(document.getElementById("extraValor").value) || 0,
+      desconto: Number(document.getElementById("desconto").value) || 0,
     };
 
     editingId = null;
@@ -508,6 +633,8 @@ document.getElementById("form").addEventListener("submit", async e => {
 
     servicos.push(novo);
   }
+
+
 
   valorManual = false;
 
