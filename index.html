@@ -7,13 +7,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Serviços - Luthieria</title>
   <link rel="stylesheet" href="./style.css">
-</head>
-
-
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f172a">
 </head>
 
 <body>
 
+
+  <header class="app-header">
+    <img src="/assets/logotipo.png">
+    <span>Admin Serviços</span>
+    <button id="fab" title="Novo serviço">＋</button>
+  </header>
 
   <div id="form-container">
     <div class="form-header">
@@ -43,7 +48,7 @@
       </select>
 
       <div class="form-actions">
-        <button type="button" class="cancelar" onclick="fecharForm()">Cancelar</button>
+        <button type="button" class="cancelar" onclick="fecharForm()">Cancelar/fechar</button>
         <button type="submit" class="salvar">Salvar</button>
       </div>
 
@@ -68,9 +73,15 @@
   <h2>Serviços</h2>
   <div id="kanban" class="kanban"></div>
 
-  <button id="fab">Nova OS</button>
+
 
   <script src="app.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js");
+    }
+  </script>
 
 </body>
 

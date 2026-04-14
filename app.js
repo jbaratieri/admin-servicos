@@ -219,8 +219,8 @@ function renderKanban() {
 
         const pagamento = s.pagamento || "pendente";
         const base = (s.orcamento || 0)
-          - (Number(s.extraValor) || 0)
-    + (Number(s.desconto) || 0);
+        - (Number(s.extraValor) || 0)
+        + (Number(s.desconto) || 0);
   
         const div = document.createElement("div");
         div.className = "card";
@@ -232,38 +232,40 @@ function renderKanban() {
           ${s.instrumento}<br>
           
 
-      ${s.servicos?.length ? `
+${(s.servicos?.length || s.extraNome) ? `
+
   <div style="margin:6px 0; display:flex; flex-direction:column; gap:6px;">
-    
-    <!-- Cabeçalho Serviços com valor -->
-    <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555;">
-      <span>Serviços</span>
-      ${base ? `<span style="font-size:10px; color:#333;">R$ ${base}</span>` : ""}
-    </div>
-    
-    <!-- Lista de serviços -->
-    <div style="display:flex; flex-wrap:wrap; gap:4px;">
-      ${s.servicos.map(serv => `
-        <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
-          ${serv}
-        </span>
-      `).join("")}
-    </div>
-    
-    <!-- Cabeçalho Extra com valor -->
-    <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555; margin-top:6px;">
-      <span>Extra</span>
-      ${s.extraValor ? `<span style="font-size:10px; color:#333;">R$ ${s.extraValor}</span>` : ""}
-    </div>
-    
-    <!-- Extra destacado -->
+
+    ${s.servicos?.length ? `
+      <!-- Serviços -->
+      <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555;">
+        <span>Serviços</span>
+        ${base ? `<span style="font-size:10px; color:#333;">R$ ${base}</span>` : ""}
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:4px;">
+        ${s.servicos.map(serv => `
+          <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
+            ${serv}
+          </span>
+        `).join("")}
+      </div>
+    ` : ""}
+
     ${s.extraNome ? `
-  <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
-    ${s.extraNome}
-  </span>
-` : ""}
-    
+      <!-- Extra -->
+      <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555; margin-top:6px;">
+        <span>Extra</span>
+        ${s.extraValor ? `<span style="font-size:10px; color:#333;">R$ ${s.extraValor}</span>` : ""}
+      </div>
+
+      <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
+        ${s.extraNome}
+      </span>
+    ` : ""}
+
   </div>
+
 ` : ""}
 
 
@@ -341,40 +343,41 @@ function renderMobile() {
         <b>${s.cliente}</b><br>
         ${s.instrumento}<br>
 
-       ${s.servicos?.length ? `
+     ${(s.servicos?.length || s.extraNome) ? `
+
   <div style="margin:6px 0; display:flex; flex-direction:column; gap:6px;">
-    
-    <!-- Cabeçalho Serviços com valor -->
-    <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555;">
-      <span>Serviços</span>
-      ${base ? `<span style="font-size:10px; color:#333;">R$ ${base}</span>` : ""}
-    </div>
-    
-    <!-- Lista de serviços -->
-    <div style="display:flex; flex-wrap:wrap; gap:4px;">
-      ${s.servicos.map(serv => `
-        <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
-          ${serv}
-        </span>
-      `).join("")}
-    </div>
-    
-    <!-- Cabeçalho Extra com valor -->
-    <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555; margin-top:6px;">
-      <span>Extra</span>
-      ${s.extraValor ? `<span style="font-size:10px; color:#333;">R$ ${s.extraValor}</span>` : ""}
-    </div>
-    
-   ${s.extraNome ? `
-  <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
-    ${s.extraNome}
-  </span>
-` : ""}
-    
+
+    ${s.servicos?.length ? `
+      <!-- Serviços -->
+      <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555;">
+        <span>Serviços</span>
+        ${base ? `<span style="font-size:10px; color:#333;">R$ ${base}</span>` : ""}
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:4px;">
+        ${s.servicos.map(serv => `
+          <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
+            ${serv}
+          </span>
+        `).join("")}
+      </div>
+    ` : ""}
+
+    ${s.extraNome ? `
+      <!-- Extra -->
+      <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555; margin-top:6px;">
+        <span>Extra</span>
+        ${s.extraValor ? `<span style="font-size:10px; color:#333;">R$ ${s.extraValor}</span>` : ""}
+      </div>
+
+      <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
+        ${s.extraNome}
+      </span>
+    ` : ""}
+
   </div>
+
 ` : ""}
-
-
 
           ${s.orcamento ? `
   <div class="financeiro">
