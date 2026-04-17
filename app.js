@@ -77,17 +77,11 @@ function renderChecklist() {
   const container = document.getElementById("checklist-servicos");
 
   container.innerHTML = SERVICOS.map(s => `
-  <label style="
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom:6px;
-    cursor:pointer;
-  ">
-    <input type="checkbox" value="${s.nome}" style="margin:0;">
-    <span title="${s.desc || ''}">
-  ${s.nome} (R$ ${s.preco})
-</span>
+  <label class="check-item">
+    <input type="checkbox" value="${s.nome}" class="check-input">
+    <span class="check-label" title="${s.desc || ''}">
+      ${s.nome} (R$ ${s.preco})
+    </span>
   </label>
 `).join("");
 
@@ -99,10 +93,8 @@ function renderChecklist() {
 
 // 🔹 calcular total automaticamente
 function calcularTotalChecklist() {
+  if (valorManual) return;
   const campo = document.getElementById("orcamento");
-
-  if (valorManual && campo.dataset.manual === "true") return;
-
   const checks = document.querySelectorAll("#checklist-servicos input:checked");
 
   let total = 0;
@@ -117,6 +109,7 @@ function calcularTotalChecklist() {
 
   // ➖ desconto
   const desconto = Number(document.getElementById("desconto").value) || 0;
+
 
   total = total + extra - desconto;
 
@@ -134,8 +127,9 @@ function preencherChecklistSelecionado(lista) {
 
 // 🔹 detectar edição manual
 document.getElementById("orcamento").addEventListener("input", (e) => {
-  valorManual = true;
-  e.target.dataset.manual = "true";
+  if (e.isTrusted) { // 🔥 só usuário real
+    valorManual = true;
+  }
 });
 
 document.getElementById("extraValor").addEventListener("input", calcularTotalChecklist);
@@ -200,10 +194,122 @@ async function avancarStatus(id) {
   }
 }
 
+function renderCard(s, statusColuna = null) {
+
+  const base = (s.orcamento || 0)
+    - (Number(s.extraValor) || 0)
+    + (Number(s.desconto) || 0);
+
+  const total = Number(s.orcamento) || 0;
+  const recebido = (s.pagamentos || []).reduce((soma, p) => soma + p.valor, 0);
+  if (recebido >= total && total > 0) {
+  alert("Serviço já pago. Não pode excluir.");
+  return;
+}
+  const restante = total - recebido;
+  const pago = restante <= 0 && total > 0;
+  const progresso = total > 0 ? (recebido / total) * 100 : 0;
+
+  return `
+    <div class="card" ${statusColuna ? `style="border-left:5px solid ${corStatus(statusColuna)}"` : ""}>
+
+      <div class="card-header">
+  <div>
+    <strong class="cliente">${s.cliente}</strong>
+    <span class="instrumento">${s.instrumento}</span>
+  </div>
+
+  <div class="data">
+    ${formatarData(s.data)}
+  </div>
+</div>
+
+      ${(s.servicos?.length || s.extraNome) ? `
+        <div class="card-servicos">
+
+          ${s.servicos?.length ? `
+            <div class="servico-bloco">
+              <div class="servico-header">
+                <span>Serviços</span>
+                ${base ? `<span class="servico-valor">R$ ${base}</span>` : ""}
+              </div>
+
+              <div class="servico-tags">
+                ${s.servicos.map(serv => `
+                  <span class="tag-servico">${serv}</span>
+                `).join("")}
+              </div>
+            </div>
+          ` : ""}
+
+          ${s.extraNome ? `
+            <div class="extra-bloco">
+              <div class="servico-header">
+                <span>Extra</span>
+                ${s.extraValor ? `<span class="servico-valor">R$ ${s.extraValor}</span>` : ""}
+              </div>
+
+              <span class="tag-servico tag-extra">${s.extraNome}</span>
+            </div>
+          ` : ""}
+
+        </div>
+      ` : ""}
+
+      ${s.orcamento ? `
+        <div class="financeiro">
+
+          ${s.desconto ? `<div class="desconto">- Desconto: R$ ${s.desconto}</div>` : ""}
+
+          <div class="total">Total: R$ ${total}</div>
+
+          ${s.pagamentos?.length ? `
+  <div class="pagamentos">
+    ${s.pagamentos.map((p, i) => `
+    <div class="pagamento-item">
+  <div class="pagamento-info">
+    💵 
+    <span class="pagamento-valor">R$ ${p.valor}</span>
+    <span class="data-pagamento">${formatarData(p.data)}</span>
+  </div>
+
+  <button class="btn-remover" onclick="removerPagamento('${s.id}', ${i})">
+    ✕
+  </button>
+</div>
+    `).join("")}
+  </div>
+` : ""}
+
+          ${pago
+        ? `<div class="pago-ok">✔ Pago completo</div>`
+        : `<div class="falta">Falta: R$ ${restante}</div>`
+      }
+
+          <div class="barra">
+            <div class="barra-fill" style="width:${progresso}%"></div>
+          </div>
+
+        </div>
+      ` : ""}
+
+      <div class="card-footer">
+        <div class="card-actions">
+          <button onclick="abrirWhatsApp('${s.telefone}', '${s.cliente}', '${s.status}', '${s.orcamento}')">📲</button>
+          <button onclick="editar('${s.id}')">✏️</button>
+          <button onclick="avancarStatus('${s.id}')">➡️</button>
+          <button onclick="abrirPagamento('${s.id}')">💵</button>
+          <button onclick="excluirServico('${s.id}')">🗑️</button>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
 function renderKanban() {
   const kanban = document.getElementById("kanban");
-
-    kanban.innerHTML = "";
+  kanban.innerHTML = "";
 
   flow.forEach(statusColuna => {
 
@@ -216,90 +322,7 @@ function renderKanban() {
       .filter(s => !s.arquivado)
       .filter(s => (s.status || "entrada") === statusColuna)
       .forEach(s => {
-
-        const pagamento = s.pagamento || "pendente";
-        const base = (s.orcamento || 0)
-        - (Number(s.extraValor) || 0)
-        + (Number(s.desconto) || 0);
-  
-        const div = document.createElement("div");
-        div.className = "card";
-
-        div.style.borderLeft = `5px solid ${corStatus(statusColuna)}`;
-
-        div.innerHTML = `
-          <b>${s.cliente}</b><br>
-          ${s.instrumento}<br>
-          
-
-${(s.servicos?.length || s.extraNome) ? `
-
-  <div style="margin:6px 0; display:flex; flex-direction:column; gap:6px;">
-
-    ${s.servicos?.length ? `
-      <!-- Serviços -->
-      <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555;">
-        <span>Serviços</span>
-        ${base ? `<span style="font-size:10px; color:#333;">R$ ${base}</span>` : ""}
-      </div>
-
-      <div style="display:flex; flex-wrap:wrap; gap:4px;">
-        ${s.servicos.map(serv => `
-          <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
-            ${serv}
-          </span>
-        `).join("")}
-      </div>
-    ` : ""}
-
-    ${s.extraNome ? `
-      <!-- Extra -->
-      <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555; margin-top:6px;">
-        <span>Extra</span>
-        ${s.extraValor ? `<span style="font-size:10px; color:#333;">R$ ${s.extraValor}</span>` : ""}
-      </div>
-
-      <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
-        ${s.extraNome}
-      </span>
-    ` : ""}
-
-  </div>
-
-` : ""}
-
-
-
-          ${s.orcamento ? `
-  <div class="financeiro">
-
-  ${s.desconto ? `<div class="desconto">- Desconto: R$ ${s.desconto}</div>` : ""}
-
-  <div class="total">
-    Total: R$ ${s.orcamento}
-  </div>
-
-</div>
-` : ""}
-
-          <small style="color:${pagamento === "pago" ? "green" : "red"}">
-            ${pagamento === "pago" ? "Pago" : "Pendente"}
-          </small><br>
-
-          <button onclick="togglePagamento('${s.id}')">💰</button>
-          <button onclick="abrirWhatsApp('${s.telefone}', '${s.cliente}', '${s.status}', '${s.orcamento}')">
-  📲</button>
-          <button onclick="editar('${s.id}')">✏️</button>
-          <button onclick="avancarStatus('${s.id}')">➡️</button>
-          ${s.status !== "entregue" && s.pagamento !== "pago" ? `
-          <button onclick="excluirServico('${s.id}')">🗑️</button>
-` : ""}
-          ${s.status === "entregue" ? `
-          <button onclick="arquivarServico('${s.id}')">📦</button>
-` : ""}
-        `;
-
-        coluna.appendChild(div);
+        coluna.innerHTML += renderCard(s, statusColuna);
       });
 
     kanban.appendChild(coluna);
@@ -310,7 +333,6 @@ function renderMobile() {
 
   currentStatusIndex = Math.max(0, Math.min(currentStatusIndex, flow.length - 1));
   const kanban = document.getElementById("kanban");
-
 
   kanban.innerHTML = "";
 
@@ -330,100 +352,66 @@ function renderMobile() {
     .filter(s => (s.status || "entrada") === statusSelecionado)
     .reverse()
     .forEach(s => {
-
-      const pagamento = s.pagamento || "pendente";
-      const base = (s.orcamento || 0)
-    - (Number(s.extraValor) || 0)
-    + (Number(s.desconto) || 0);
-
-      const div = document.createElement("div");
-      div.className = "card";
-
-      div.innerHTML = `
-        <b>${s.cliente}</b><br>
-        ${s.instrumento}<br>
-
-     ${(s.servicos?.length || s.extraNome) ? `
-
-  <div style="margin:6px 0; display:flex; flex-direction:column; gap:6px;">
-
-    ${s.servicos?.length ? `
-      <!-- Serviços -->
-      <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555;">
-        <span>Serviços</span>
-        ${base ? `<span style="font-size:10px; color:#333;">R$ ${base}</span>` : ""}
-      </div>
-
-      <div style="display:flex; flex-wrap:wrap; gap:4px;">
-        ${s.servicos.map(serv => `
-          <span style="font-size:11px;background:#f1f1f1;padding:4px 6px;border-radius:6px;">
-            ${serv}
-          </span>
-        `).join("")}
-      </div>
-    ` : ""}
-
-    ${s.extraNome ? `
-      <!-- Extra -->
-      <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; color:#555; margin-top:6px;">
-        <span>Extra</span>
-        ${s.extraValor ? `<span style="font-size:10px; color:#333;">R$ ${s.extraValor}</span>` : ""}
-      </div>
-
-      <span style="font-size:11px;background:#d1e7dd;padding:4px 6px;border-radius:6px;color:#0f5132;">
-        ${s.extraNome}
-      </span>
-    ` : ""}
-
-  </div>
-
-` : ""}
-
-          ${s.orcamento ? `
-  <div class="financeiro">
-
-  ${s.desconto ? `<div class="desconto">- Desconto: R$ ${s.desconto}</div>` : ""}
-
-  <div class="total">
-    Total: R$ ${s.orcamento}
-  </div>
-
-</div>
-` : ""}
-
-
-        <small style="color:${pagamento === "pago" ? "green" : "red"}">
-          ${pagamento === "pago" ? "Pago" : "Pendente"}
-        </small><br>
-
-        <button onclick="togglePagamento('${s.id}')">💰</button>
-        <button onclick="abrirWhatsApp('${s.telefone}', '${s.cliente}', '${s.status}', '${s.orcamento}')">
-  📲</button>
-        <button onclick="editar('${s.id}')">✏️</button>
-        <button onclick="avancarStatus('${s.id}')">➡️</button>
-        ${s.status !== "entregue" && s.pagamento !== "pago" ? `
-        <button onclick="excluirServico('${s.id}')">🗑️</button>
-` : ""}
-        ${s.status === "entregue" ? `
-        <button onclick="arquivarServico('${s.id}')">📦</button>
-` : ""}
-      `;
-
-      lista.appendChild(div);
+      lista.innerHTML += renderCard(s);
     });
 
   kanban.appendChild(lista);
 }
 
-async function togglePagamento(id) {
-  const idx = servicos.findIndex(s => s.id === id);
+function formatarData(dataISO) {
+  if (!dataISO) return "";
 
+  const d = new Date(dataISO);
+
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit"
+  });
+}
+
+async function abrirPagamento(id) {
+  const valor = Number(prompt("Valor recebido (R$):"));
+
+  if (!valor || valor <= 0) return;
+
+  const idx = servicos.findIndex(s => s.id === id);
   if (idx === -1) return;
 
-  const atual = servicos[idx].pagamento || "pendente";
-  servicos[idx].pagamento = atual === "pago" ? "pendente" : "pago";
+  if (!servicos[idx].pagamentos) {
+    servicos[idx].pagamentos = [];
+  }
 
-  // 🔥 instantâneo
+  servicos[idx].pagamentos.push({
+    valor,
+    data: new Date().toISOString()
+  });
+
+  // 🔥 recalcular pagamento automático
+  const total = Number(servicos[idx].orcamento) || 0;
+
+
+
+  render();
+
+  try {
+    await save();
+  } catch (e) {
+    alert("Erro ao salvar pagamento");
+    await load();
+  }
+}
+
+async function removerPagamento(servicoId, indexPagamento) {
+
+  const confirmar = confirm("Remover este pagamento?");
+  if (!confirmar) return;
+
+  const idx = servicos.findIndex(s => s.id === servicoId);
+  if (idx === -1) return;
+
+  servicos[idx].pagamentos.splice(indexPagamento, 1);
+
   render();
 
   try {
@@ -443,7 +431,10 @@ async function excluirServico(id) {
     return;
   }
 
-  if (servico?.pagamento === "pago") {
+  const total = Number(servico.orcamento) || 0;
+  const recebido = (servico.pagamentos || []).reduce((s, p) => s + p.valor, 0);
+
+  if (recebido >= total && total > 0) {
     alert("Serviços pagos não podem ser excluídos.");
     return;
   }
@@ -556,19 +547,19 @@ function editar(id) {
   const s = servicos.find(x => x.id === id);
 
   document.getElementById("cliente").value = s.cliente || "";
-document.getElementById("telefone").value = s.telefone || "";
-document.getElementById("instrumento").value = s.instrumento || "";
-document.getElementById("problema").value = s.problema || "";
-document.getElementById("orcamento").value = s.orcamento || "";
-document.getElementById("pagamento").value = s.pagamento || "pendente";
+  document.getElementById("telefone").value = s.telefone || "";
+  document.getElementById("instrumento").value = s.instrumento || "";
+  document.getElementById("problema").value = s.problema || "";
+  document.getElementById("orcamento").value = s.orcamento || "";
+  document.getElementById("pagamento").value = s.pagamento || "pendente";
 
-// ✅ NOVOS CAMPOS
-document.getElementById("extraNome").value = s.extraNome || "";
-document.getElementById("extraValor").value = s.extraValor || "";
-document.getElementById("desconto").value = s.desconto || "";
+  // ✅ NOVOS CAMPOS
+  document.getElementById("extraNome").value = s.extraNome || "";
+  document.getElementById("extraValor").value = s.extraValor || "";
+  document.getElementById("desconto").value = s.desconto || "";
 
-// checklist
-preencherChecklistSelecionado(s.servicos);
+  // checklist
+  preencherChecklistSelecionado(s.servicos);
 
   // 🔥 AQUI ESTÁ O SEGREDO
   preencherChecklistSelecionado(s.servicos);
@@ -598,12 +589,12 @@ document.getElementById("form").addEventListener("submit", async e => {
     if (serv) valorTotal += serv.preco;
   });
 
- const extra = Number(document.getElementById("extraValor").value) || 0;
-const desconto = Number(document.getElementById("desconto").value) || 0;
+  const extra = Number(document.getElementById("extraValor").value) || 0;
+  const desconto = Number(document.getElementById("desconto").value) || 0;
 
-const valorFinal = valorManual
-  ? Number(document.getElementById("orcamento").value)
-  : (valorTotal + extra - desconto);
+  const valorFinal = valorManual
+    ? Number(document.getElementById("orcamento").value)
+    : (valorTotal + extra - desconto);
 
   if (editingId) {
     const idx = servicos.findIndex(s => s.id === editingId);
@@ -616,10 +607,10 @@ const valorFinal = valorManual
       problema: document.getElementById("problema").value,
       servicos: servicosSelecionados,
       orcamento: valorFinal,
-      pagamento: document.getElementById("pagamento").value,
       extraNome: document.getElementById("extraNome").value,
-      extraValor: Number(document.getElementById("extraValor").value) || 0,
-      desconto: Number(document.getElementById("desconto").value) || 0,
+      extraValor: extra,
+      desconto: desconto,
+
     };
 
     editingId = null;
@@ -634,9 +625,16 @@ const valorFinal = valorManual
       servicos: servicosSelecionados,
       status: "entrada",
       orcamento: valorFinal,
-      pagamento: document.getElementById("pagamento").value || "pendente",
+
+      // 🔥 FALTAVAM ESSES
+      extraNome: document.getElementById("extraNome").value,
+      extraValor: extra,
+      desconto: desconto,
+
+      pagamentos: [],
       data: new Date().toISOString()
     };
+
 
     servicos.push(novo);
   }
