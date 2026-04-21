@@ -181,6 +181,12 @@ button[type="submit"] {
   font-size: 12px;
 }
 
+.sem-orcamento {
+  color: #888;
+  font-weight: normal;
+  font-size: 12px;
+}
+
 /* pagamentos */
 .pagamentos {
   margin-top: 6px;
@@ -210,19 +216,42 @@ button[type="submit"] {
   color: #999;
 }
 
-/* botão remover (limpo) */
+.pagamento-acoes {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* visíveis no toque (antes some sem :hover no celular) */
+.btn-editar-pag,
 .btn-remover {
   border: none;
   background: transparent;
-  font-size: 12px;
-  color: #bbb;
-  opacity: 0;
-  transition: 0.2s;
+  font-size: 14px;
+  line-height: 1;
+  padding: 6px 8px;
+  opacity: 0.55;
+  transition: opacity 0.15s, color 0.15s;
 }
 
+.btn-editar-pag {
+  color: #3498db;
+}
+
+.btn-remover {
+  color: #e74c3c;
+}
+
+.pagamento-item:hover .btn-editar-pag,
 .pagamento-item:hover .btn-remover {
   opacity: 1;
-  color: #e74c3c;
+}
+
+@media (hover: none) {
+  .btn-editar-pag,
+  .btn-remover {
+    opacity: 0.85;
+  }
 }
 
 /* status financeiro */

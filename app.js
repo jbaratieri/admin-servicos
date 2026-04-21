@@ -58,6 +58,22 @@ function isMobile() {
   return window.innerWidth < 768;
 }
 
+/** Aceita prompt/teclado BR: "80", "80,50", "1.234,56", "R$ 100" */
+function parseValorReais(raw) {
+  if (raw == null) return NaN;
+  let s = String(raw).trim().replace(/\s/g, "").replace(/R\$\s?/gi, "");
+  if (!s) return NaN;
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+  if (hasComma && hasDot) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (hasComma) {
+    s = s.replace(",", ".");
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
 
 function uid() {
   return "OS-" + Date.now().toString().slice(-5);
@@ -143,19 +159,52 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+/** Planilha/API às vezes grava pagamentos como texto JSON ou vem vazio */
+function garantirArrayPagamentos(s) {
+  let p = s.pagamentos;
+  if (p == null || p === "") {
+    s.pagamentos = [];
+    return;
+  }
+  if (typeof p === "string") {
+    const t = p.trim();
+    if (!t) {
+      s.pagamentos = [];
+      return;
+    }
+    try {
+      const parsed = JSON.parse(t);
+      s.pagamentos = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      s.pagamentos = [];
+    }
+    return;
+  }
+  if (!Array.isArray(p)) {
+    s.pagamentos = [];
+  }
+}
+
 // 🔹 carregar dados
 async function load() {
   const res = await fetch(API_URL);
   servicos = await res.json();
+  if (!Array.isArray(servicos)) {
+    servicos = [];
+  }
+  servicos.forEach(garantirArrayPagamentos);
   render();
 }
 
 // 🔹 salvar dados
 async function save() {
-  await fetch(API_URL, {
+  const res = await fetch(API_URL, {
     method: "POST",
     body: JSON.stringify(servicos)
   });
+  if (!res.ok) {
+    throw new Error("Falha ao salvar (" + res.status + ")");
+  }
 }
 
 function corStatus(status) {
@@ -201,14 +250,11 @@ function renderCard(s, statusColuna = null) {
     + (Number(s.desconto) || 0);
 
   const total = Number(s.orcamento) || 0;
-  const recebido = (s.pagamentos || []).reduce((soma, p) => soma + p.valor, 0);
-  if (recebido >= total && total > 0) {
-  alert("Serviço já pago. Não pode excluir.");
-  return;
-}
+  const recebido = (s.pagamentos || []).reduce((soma, p) => soma + (Number(p.valor) || 0), 0);
   const restante = total - recebido;
   const pago = restante <= 0 && total > 0;
   const progresso = total > 0 ? (recebido / total) * 100 : 0;
+  const mostrarFinanceiro = total > 0 || recebido > 0;
 
   return `
     <div class="card" ${statusColuna ? `style="border-left:5px solid ${corStatus(statusColuna)}"` : ""}>
@@ -256,12 +302,12 @@ function renderCard(s, statusColuna = null) {
         </div>
       ` : ""}
 
-      ${s.orcamento ? `
+      ${mostrarFinanceiro ? `
         <div class="financeiro">
 
           ${s.desconto ? `<div class="desconto">- Desconto: R$ ${s.desconto}</div>` : ""}
 
-          <div class="total">Total: R$ ${total}</div>
+          <div class="total">Total: ${total > 0 ? `R$ ${total}` : `<span class="sem-orcamento">— defina no ✏️</span>`}</div>
 
           ${s.pagamentos?.length ? `
   <div class="pagamentos">
@@ -273,17 +319,20 @@ function renderCard(s, statusColuna = null) {
     <span class="data-pagamento">${formatarData(p.data)}</span>
   </div>
 
-  <button class="btn-remover" onclick="removerPagamento('${s.id}', ${i})">
-    ✕
-  </button>
+  <div class="pagamento-acoes">
+    <button type="button" class="btn-editar-pag" onclick="editarPagamento('${s.id}', ${i})" title="Alterar valor">✏️</button>
+    <button type="button" class="btn-remover" onclick="removerPagamento('${s.id}', ${i})" title="Excluir pagamento">✕</button>
+  </div>
 </div>
     `).join("")}
   </div>
 ` : ""}
 
-          ${pago
-        ? `<div class="pago-ok">✔ Pago completo</div>`
-        : `<div class="falta">Falta: R$ ${restante}</div>`
+          ${total > 0
+        ? (pago
+          ? `<div class="pago-ok">✔ Pago completo</div>`
+          : `<div class="falta">Falta: R$ ${restante}</div>`)
+        : (recebido > 0 ? `<div class="falta">Recebido (sem total no OS): R$ ${recebido}</div>` : "")
       }
 
           <div class="barra">
@@ -371,16 +420,19 @@ function formatarData(dataISO) {
 }
 
 async function abrirPagamento(id) {
-  const valor = Number(prompt("Valor recebido (R$):"));
+  const texto = prompt("Valor recebido (R$):\n(dica: pode usar vírgula, ex. 80,50)");
+  if (texto === null) return;
 
-  if (!valor || valor <= 0) return;
+  const valor = parseValorReais(texto);
+  if (!Number.isFinite(valor) || valor <= 0) {
+    alert("Valor inválido. Use números como 100 ou 100,50");
+    return;
+  }
 
   const idx = servicos.findIndex(s => s.id === id);
   if (idx === -1) return;
 
-  if (!servicos[idx].pagamentos) {
-    servicos[idx].pagamentos = [];
-  }
+  garantirArrayPagamentos(servicos[idx]);
 
   servicos[idx].pagamentos.push({
     valor,
@@ -402,6 +454,39 @@ async function abrirPagamento(id) {
   }
 }
 
+async function editarPagamento(servicoId, indexPagamento) {
+  const idx = servicos.findIndex(s => s.id === servicoId);
+  if (idx === -1) return;
+
+  garantirArrayPagamentos(servicos[idx]);
+  const lista = servicos[idx].pagamentos;
+  const atual = lista[indexPagamento];
+  if (!atual) return;
+
+  const texto = prompt("Novo valor (R$):", String(atual.valor));
+  if (texto === null) return;
+
+  const valor = parseValorReais(texto);
+  if (!Number.isFinite(valor) || valor <= 0) {
+    alert("Valor inválido. Use números como 100 ou 100,50");
+    return;
+  }
+
+  servicos[idx].pagamentos[indexPagamento] = {
+    ...atual,
+    valor
+  };
+
+  render();
+
+  try {
+    await save();
+  } catch (e) {
+    alert("Erro ao salvar");
+    await load();
+  }
+}
+
 async function removerPagamento(servicoId, indexPagamento) {
 
   const confirmar = confirm("Remover este pagamento?");
@@ -410,6 +495,7 @@ async function removerPagamento(servicoId, indexPagamento) {
   const idx = servicos.findIndex(s => s.id === servicoId);
   if (idx === -1) return;
 
+  garantirArrayPagamentos(servicos[idx]);
   servicos[idx].pagamentos.splice(indexPagamento, 1);
 
   render();
@@ -424,15 +510,18 @@ async function removerPagamento(servicoId, indexPagamento) {
 
 async function excluirServico(id) {
   const servico = servicos.find(s => s.id === id);
+  if (!servico) return;
+
+  garantirArrayPagamentos(servico);
 
   // 🚫 bloqueios de segurança
-  if (servico?.status === "entregue") {
+  if (servico.status === "entregue") {
     alert("Serviços já entregues não podem ser excluídos.");
     return;
   }
 
   const total = Number(servico.orcamento) || 0;
-  const recebido = (servico.pagamentos || []).reduce((s, p) => s + p.valor, 0);
+  const recebido = servico.pagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
 
   if (recebido >= total && total > 0) {
     alert("Serviços pagos não podem ser excluídos.");
