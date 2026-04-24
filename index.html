@@ -1,87 +1,125 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 
 <head>
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Serviços - Luthieria</title>
+  <title>Ordens de serviço — Luthieria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./style.css">
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#0c0a09">
 </head>
 
 <body>
 
-
   <header class="app-header">
-    <img src="/assets/logotipo.png">
-    <span>Admin Serviços</span>
-    <button id="fab" title="Novo serviço">＋</button>
+    <div class="app-header-brand">
+      <img src="/assets/logotipo.png" alt="Logotipo">
+      <div class="app-header-text">
+        <span class="app-title">Oficina</span>
+        <span class="app-sub">Ordens de serviço</span>
+      </div>
+    </div>
+    <button type="button" id="fab" class="fab" title="Nova ordem de serviço">＋ Nova OS</button>
   </header>
 
-  <div id="form-container">
+  <div id="form-container" class="form-container" aria-hidden="true" role="dialog">
     <div class="form-header">
-      <button onclick="fecharForm()">←</button>
-      <h2>Nova Ordem de Serviço</h2>
+      <button type="button" class="btn-icon" onclick="fecharForm()" aria-label="Voltar">←</button>
+      <h2 id="form-title">Nova ordem de serviço</h2>
     </div>
 
     <form id="form" class="form-app">
+      <label class="field-label">Cliente</label>
+      <input id="cliente" placeholder="Nome completo" required autocomplete="name">
 
-      <input id="cliente" placeholder="Nome do cliente" required>
-      <input id="endereco" placeholder="Endereço">
-      <input id="telefone" placeholder="WhatsApp">
+      <label class="field-label">Contato &amp; endereço</label>
+      <input id="telefone" placeholder="WhatsApp / telefone" inputmode="tel" autocomplete="tel">
+      <input id="endereco" placeholder="Endereço (opcional)" autocomplete="street-address">
 
-      <input id="instrumento" placeholder="Instrumento">
-      <textarea id="problema" placeholder="Problema"></textarea>
-      <input id="extraNome" placeholder="Serviço extra (opcional)">
-      <input id="extraValor" type="number" placeholder="Valor extra (R$)">
-      <input id="desconto" type="number" placeholder="Desconto (R$)">
+      <label class="field-label">Instrumento</label>
+      <input id="instrumento" placeholder="Ex.: Strato Fender MIM 2018">
 
-      <div id="checklist-servicos"></div>
+      <label class="field-label">Problema / pedido do cliente</label>
+      <textarea id="problema" placeholder="O que o cliente relatou ou pediu"></textarea>
 
-      <input id="orcamento" placeholder="Orçamento (R$)" type="number">
+      <label class="field-label">Notas internas <span class="hint">(só oficina)</span></label>
+      <textarea id="notasInternas" class="textarea-notas" placeholder="Trastes 7–9 baixos, combinado retirada sábado…"></textarea>
 
+      <label class="field-label">Serviço extra</label>
+      <input id="extraNome" placeholder="Descrição (opcional)">
+      <input id="extraValor" type="number" placeholder="Valor extra (R$)" min="0" step="0.01">
+
+      <label class="field-label">Desconto (R$)</label>
+      <input id="desconto" type="number" placeholder="0" min="0" step="0.01">
+
+      <label class="field-label">Serviços da tabela</label>
+      <div id="checklist-servicos" class="checklist-servicos"></div>
+
+      <label class="field-label">Orçamento total (R$)</label>
+      <input id="orcamento" placeholder="Calculado pela checklist" type="number" min="0" step="0.01">
+
+      <label class="field-label">Situação legada</label>
       <select id="pagamento">
         <option value="pendente">Pendente</option>
         <option value="pago">Pago</option>
       </select>
 
       <div class="form-actions">
-        <button type="button" class="cancelar" onclick="fecharForm()">Cancelar/fechar</button>
-        <button type="submit" class="salvar">Salvar</button>
+        <button type="button" class="cancelar" onclick="fecharForm()">Fechar</button>
+        <button type="submit" class="salvar">Salvar OS</button>
       </div>
-
     </form>
-
   </div>
 
-
-
-
-  <div style="display:flex; gap:10px; margin:10px; align-items:center;">
-    <select id="filtroStatus">
-      <option value="entrada">Entrada</option>
-      <option value="diagnostico">Diagnóstico</option>
-      <option value="orcamento">Orçamento</option>
-      <option value="em_andamento">Em andamento</option>
-      <option value="pronto">Pronto</option>
-      <option value="entregue">Entregue</option>
-    </select>
-    <button onclick="verArquivados()">📦 Histórico</button>
+  <div id="modal-root" class="modal-root" aria-hidden="true">
+    <div class="modal-backdrop" data-modal-dismiss></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-head">
+        <h3 id="modal-title" class="modal-title"></h3>
+        <button type="button" class="modal-close" id="modal-close" aria-label="Fechar">×</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+      <div id="modal-footer" class="modal-footer"></div>
+    </div>
   </div>
 
-  <h2>Serviços</h2>
-  <div id="kanban" class="kanban"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <main class="main-area">
+    <div class="toolbar">
+      <div class="toolbar-search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" id="busca" placeholder="Buscar cliente, instrumento, OS…" autocomplete="off">
+      </div>
+      <div class="toolbar-row">
+        <label class="sr-only" for="filtroStatus">Coluna do fluxo</label>
+        <select id="filtroStatus" class="toolbar-select">
+          <option value="entrada">Entrada</option>
+          <option value="diagnostico">Diagnóstico</option>
+          <option value="orcamento">Orçamento</option>
+          <option value="em_andamento">Em andamento</option>
+          <option value="pronto">Pronto</option>
+          <option value="entregue">Entregue</option>
+        </select>
+        <button type="button" class="btn-toolbar" id="btn-historico" onclick="verArquivados()">Histórico</button>
+        <button type="button" class="btn-toolbar btn-toolbar-secondary" id="btn-backup">Backup JSON</button>
+      </div>
+    </div>
+
+    <h2 class="section-title">Quadro de serviços</h2>
+    <div id="kanban" class="kanban"></div>
+  </main>
 
   <script src="app.js"></script>
-
   <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js");
     }
   </script>
-
 </body>
 
 </html>
