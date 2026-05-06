@@ -168,6 +168,7 @@ let servicos = [];
 let currentStatusIndex = 0;
 let valorManual = false;
 let filtroBusca = "";
+let fotosFormState = { antes: "", depois: "" };
 
 const formContainer = document.getElementById("form-container");
 
@@ -184,6 +185,77 @@ function escapeAttr(s) {
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function normalizarFotosServico(s) {
+  const f = s?.fotos;
+  if (!f || typeof f !== "object") {
+    s.fotos = { antes: "", depois: "" };
+    return;
+  }
+  s.fotos = {
+    antes: typeof f.antes === "string" ? f.antes : "",
+    depois: typeof f.depois === "string" ? f.depois : ""
+  };
+}
+
+function atualizarPreviewFoto(tipo) {
+  const isAntes = tipo === "antes";
+  const preview = document.getElementById(isAntes ? "fotoAntesPreview" : "fotoDepoisPreview");
+  const remover = document.getElementById(isAntes ? "fotoAntesRemover" : "fotoDepoisRemover");
+  const valor = fotosFormState[tipo] || "";
+  if (!preview || !remover) return;
+  if (!valor) {
+    preview.hidden = true;
+    preview.removeAttribute("src");
+    remover.hidden = true;
+    return;
+  }
+  preview.src = valor;
+  preview.hidden = false;
+  remover.hidden = false;
+}
+
+function atualizarPreviewsFotosForm() {
+  atualizarPreviewFoto("antes");
+  atualizarPreviewFoto("depois");
+}
+
+function resetFotosForm() {
+  fotosFormState = { antes: "", depois: "" };
+  const inputAntes = document.getElementById("fotoAntesInput");
+  const inputDepois = document.getElementById("fotoDepoisInput");
+  if (inputAntes) inputAntes.value = "";
+  if (inputDepois) inputDepois.value = "";
+  atualizarPreviewsFotosForm();
+}
+
+function carregarFotosNoForm(fotos) {
+  fotosFormState = {
+    antes: fotos?.antes || "",
+    depois: fotos?.depois || ""
+  };
+  atualizarPreviewsFotosForm();
+}
+
+async function processarFotoArquivo(file) {
+  if (!file) return "";
+  if (!file.type || !file.type.startsWith("image/")) {
+    throw new Error("Arquivo não é imagem");
+  }
+  const bitmap = await createImageBitmap(file);
+  const maxLado = 1600;
+  const escala = Math.min(1, maxLado / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * escala));
+  const h = Math.max(1, Math.round(bitmap.height * escala));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas indisponível");
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", 0.82);
 }
 
 function parseValorReais(raw) {
@@ -538,6 +610,7 @@ async function load() {
   }
   if (!Array.isArray(servicos)) servicos = [];
   servicos.forEach(garantirArrayPagamentos);
+  servicos.forEach(normalizarFotosServico);
   render();
   atualizarIndicadorArmazenamento();
 }
@@ -615,6 +688,7 @@ function formatarStatus(status) {
 
 function renderCard(s, statusColuna = null) {
   garantirArrayPagamentos(s);
+  normalizarFotosServico(s);
 
   const base = (s.orcamento || 0)
     - (Number(s.extraValor) || 0)
@@ -628,6 +702,11 @@ function renderCard(s, statusColuna = null) {
   const mostrarFinanceiro = total > 0 || recebido > 0;
 
   const idAttr = escapeAttr(s.id);
+  const fotosHtml = (s.fotos.antes || s.fotos.depois) ? `
+  <div class="card-fotos">
+    ${s.fotos.antes ? `<button type="button" class="foto-chip" data-action="view-photo" data-id="${idAttr}" data-label="Antes" data-src="${escapeAttr(s.fotos.antes)}"><img src="${escapeAttr(s.fotos.antes)}" alt="Foto antes"><span>Antes</span></button>` : ""}
+    ${s.fotos.depois ? `<button type="button" class="foto-chip" data-action="view-photo" data-id="${idAttr}" data-label="Depois" data-src="${escapeAttr(s.fotos.depois)}"><img src="${escapeAttr(s.fotos.depois)}" alt="Foto depois"><span>Depois</span></button>` : ""}
+  </div>` : "";
   const notasBlock = (s.notasInternas && String(s.notasInternas).trim())
     ? `<details class="card-notas"><summary>Notas da oficina</summary><div class="notas-body">${escapeHtml(s.notasInternas)}</div></details>`
     : "";
@@ -664,6 +743,7 @@ function renderCard(s, statusColuna = null) {
         </div>
         <div class="data">${formatarData(s.data)}</div>
       </div>
+      ${fotosHtml}
       ${notasBlock}
       ${(s.servicos?.length || s.extraNome) ? `
         <div class="card-servicos">
@@ -704,6 +784,9 @@ function renderCard(s, statusColuna = null) {
           <button type="button" class="card-action" data-action="wa" data-id="${idAttr}" title="WhatsApp">📲</button>
           <button type="button" class="card-action" data-action="edit" data-id="${idAttr}" title="Editar OS">✏️</button>
           <button type="button" class="card-action" data-action="next" data-id="${idAttr}" title="Próxima etapa">➡️</button>
+          ${(s.status || "entrada") === "entregue"
+      ? `<button type="button" class="card-action" data-action="archive" data-id="${idAttr}" title="Arquivar OS">📦</button>`
+      : ""}
           <button type="button" class="card-action" data-action="pay" data-id="${idAttr}" title="Registrar recebimento">💵</button>
           <button type="button" class="card-action danger" data-action="delete" data-id="${idAttr}" title="Excluir OS">🗑️</button>
         </div>
@@ -786,8 +869,14 @@ function onKanbanClick(e) {
     case "pay":
       abrirPagamento(id);
       break;
+    case "archive":
+      confirmarArquivamento(id);
+      break;
     case "delete":
       excluirServico(id);
+      break;
+    case "view-photo":
+      abrirVisualizacaoFoto(btn.dataset.src, btn.dataset.label);
       break;
     case "edit-pay": {
       const i = Number(btn.dataset.index);
@@ -799,20 +888,41 @@ function onKanbanClick(e) {
       removerPagamento(id, i);
       break;
     }
+    case "unarchive":
+      confirmarDesarquivamento(id);
+      break;
     default:
       break;
   }
 }
 
+function abrirVisualizacaoFoto(src, label = "Foto") {
+  if (!src) return;
+  abrirModal({
+    title: label,
+    bodyHTML: `<img src="${escapeAttr(src)}" alt="${escapeAttr(label)}" style="width:100%;height:auto;border-radius:12px;display:block">`,
+    footerButtons: [{ label: "Fechar", onClick: () => fecharModal() }]
+  });
+}
+
 function abrirWhatsApp(s) {
   const url = gerarLinkWhatsApp(s.telefone, s.cliente, s.status || "entrada", s.orcamento);
   if (url !== "#") window.open(url, "_blank");
-  else showToast("Cadastre o telefone na OS");
+  else showToast("Telefone invalido na OS");
+}
+
+function normalizarNumeroWhatsApp(telefone) {
+  const digits = String(telefone || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length >= 12) return digits;
+  if (digits.length >= 10) return `55${digits}`;
+  return "";
 }
 
 function gerarLinkWhatsApp(telefone, nome, status, valor) {
   if (!telefone) return "#";
-  const numero = telefone.replace(/\D/g, "");
+  const numero = normalizarNumeroWhatsApp(telefone);
+  if (!numero) return "#";
   const v = valor || "0";
   const n = nome || "cliente";
   let mensagem = "";
@@ -826,7 +936,7 @@ function gerarLinkWhatsApp(telefone, nome, status, valor) {
     default:
       mensagem = `Olá ${n}`;
   }
-  return `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
+  return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
 }
 
 function abrirPagamento(id) {
@@ -999,6 +1109,69 @@ async function arquivarServico(id) {
   }
 }
 
+function confirmarArquivamento(id) {
+  const servico = servicos.find(s => s.id === id);
+  if (!servico) return;
+  if (servico.arquivado) {
+    showToast("Essa OS ja esta no historico");
+    return;
+  }
+  if ((servico.status || "entrada") !== "entregue") {
+    showToast("Arquivamento liberado apenas para OS concluidas (Entregue)");
+    return;
+  }
+  abrirModal({
+    title: "Arquivar ordem de serviço",
+    bodyHTML: `<p>Arquivar a OS <strong>${escapeHtml(servico.id)}</strong> — ${escapeHtml(servico.cliente || "")}?</p><p class="modal-hint">Ela sai do quadro e pode ser vista em Histórico.</p>`,
+    footerButtons: [
+      { label: "Cancelar", onClick: () => fecharModal() },
+      {
+        label: "Arquivar",
+        primary: true,
+        onClick: async () => {
+          fecharModal();
+          await arquivarServico(id);
+          showToast("OS arquivada no historico");
+        }
+      }
+    ]
+  });
+}
+
+async function desarquivarServico(id) {
+  const idx = servicos.findIndex(s => s.id === id);
+  if (idx === -1) return;
+  servicos[idx].arquivado = false;
+  render();
+  try {
+    await save();
+  } catch (e) {
+    await load();
+  }
+}
+
+function confirmarDesarquivamento(id) {
+  const servico = servicos.find(s => s.id === id);
+  if (!servico) return;
+  abrirModal({
+    title: "Desarquivar ordem de serviço",
+    bodyHTML: `<p>Trazer a OS <strong>${escapeHtml(servico.id)}</strong> de volta para o quadro?</p><p class="modal-hint">Ela volta para a coluna atual: <strong>${escapeHtml(formatarStatus(servico.status || "entrada"))}</strong>.</p>`,
+    footerButtons: [
+      { label: "Cancelar", onClick: () => fecharModal() },
+      {
+        label: "Desarquivar",
+        primary: true,
+        onClick: async () => {
+          fecharModal();
+          await desarquivarServico(id);
+          showToast("OS desarquivada");
+          verArquivados();
+        }
+      }
+    ]
+  });
+}
+
 function verArquivados() {
   const kanban = document.getElementById("kanban");
   const arquivados = servicos.filter(s => s.arquivado);
@@ -1016,6 +1189,11 @@ function verArquivados() {
         ${escapeHtml(s.instrumento || "")}<br>
         ${s.orcamento ? `<div class="valor">R$ ${escapeHtml(String(s.orcamento))}</div>` : ""}
         <small>${escapeHtml(formatarStatus(s.status))}</small>
+        <div class="card-footer">
+          <div class="card-actions">
+            <button type="button" class="card-action" data-action="unarchive" data-id="${escapeAttr(s.id)}" title="Desarquivar OS">↩️</button>
+          </div>
+        </div>
       </div>
     `).join("")}`;
 
@@ -1104,6 +1282,7 @@ function onImportFileChange(e) {
 function editar(id) {
   const s = servicos.find(x => x.id === id);
   if (!s) return;
+  normalizarFotosServico(s);
 
   document.getElementById("form-title").textContent = "Editar ordem de serviço";
   document.getElementById("cliente").value = s.cliente || "";
@@ -1117,6 +1296,7 @@ function editar(id) {
   document.getElementById("extraNome").value = s.extraNome || "";
   document.getElementById("extraValor").value = s.extraValor ?? "";
   document.getElementById("desconto").value = s.desconto ?? "";
+  carregarFotosNoForm(s.fotos);
 
   preencherChecklistSelecionado(s.servicos);
   valorManual = false;
@@ -1155,7 +1335,11 @@ document.getElementById("form").addEventListener("submit", async e => {
     extraNome: document.getElementById("extraNome").value,
     extraValor: extra,
     desconto,
-    pagamento: document.getElementById("pagamento").value
+    pagamento: document.getElementById("pagamento").value,
+    fotos: {
+      antes: fotosFormState.antes || "",
+      depois: fotosFormState.depois || ""
+    }
   };
 
   if (editingId) {
@@ -1193,6 +1377,7 @@ document.getElementById("form").addEventListener("submit", async e => {
   }, 700);
 
   e.target.reset();
+  resetFotosForm();
   renderChecklist();
   fecharForm();
   document.getElementById("form-title").textContent = "Nova ordem de serviço";
@@ -1238,6 +1423,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     editingId = null;
     valorManual = false;
     document.getElementById("form").reset();
+    resetFotosForm();
     document.getElementById("form-title").textContent = "Nova ordem de serviço";
     renderChecklist();
     abrirForm();
@@ -1266,6 +1452,47 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("modal-close").addEventListener("click", fecharModal);
   document.querySelector("#modal-root .modal-backdrop")?.addEventListener("click", fecharModal);
+
+  document.getElementById("fotoAntesBtn")?.addEventListener("click", () => {
+    document.getElementById("fotoAntesInput")?.click();
+  });
+  document.getElementById("fotoDepoisBtn")?.addEventListener("click", () => {
+    document.getElementById("fotoDepoisInput")?.click();
+  });
+  document.getElementById("fotoAntesRemover")?.addEventListener("click", () => {
+    fotosFormState.antes = "";
+    const el = document.getElementById("fotoAntesInput");
+    if (el) el.value = "";
+    atualizarPreviewFoto("antes");
+  });
+  document.getElementById("fotoDepoisRemover")?.addEventListener("click", () => {
+    fotosFormState.depois = "";
+    const el = document.getElementById("fotoDepoisInput");
+    if (el) el.value = "";
+    atualizarPreviewFoto("depois");
+  });
+  document.getElementById("fotoAntesInput")?.addEventListener("change", async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      fotosFormState.antes = await processarFotoArquivo(file);
+      atualizarPreviewFoto("antes");
+      showToast("Foto de antes adicionada");
+    } catch {
+      showToast("Nao foi possivel processar a foto");
+    }
+  });
+  document.getElementById("fotoDepoisInput")?.addEventListener("change", async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      fotosFormState.depois = await processarFotoArquivo(file);
+      atualizarPreviewFoto("depois");
+      showToast("Foto de depois adicionada");
+    } catch {
+      showToast("Nao foi possivel processar a foto");
+    }
+  });
 
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {

@@ -507,6 +507,56 @@ a {
   border-color: #fcd34d;
 }
 
+.photo-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.photo-field-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 10px;
+}
+
+.photo-field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.btn-photo-pick,
+.btn-photo-remove {
+  border: 1px solid var(--border);
+  background: #fafaf9;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.btn-photo-pick {
+  width: 100%;
+}
+
+.btn-photo-remove {
+  color: var(--danger);
+  padding: 4px 8px;
+}
+
+.photo-preview {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-top: 8px;
+}
+
 /* ——— Tabela de serviços (checklist) ——— */
 .checklist-servicos {
   padding: 0;
@@ -827,6 +877,35 @@ button[type="submit"] {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.card-fotos {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.foto-chip {
+  border: 1px solid var(--border);
+  background: #fafaf9;
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.foto-chip img {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.foto-chip span {
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .servico-header {
@@ -1257,16 +1336,28 @@ button[type="submit"] {
 .topo-arquivados {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff7ed;
 }
 
 .btn-voltar {
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid #fdba74;
+  background: linear-gradient(180deg, #ea580c 0%, #c2410c 100%);
+  color: #fff;
   padding: 10px 14px;
   border-radius: var(--radius);
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(194, 65, 12, 0.25);
+}
+
+.btn-voltar:hover {
+  filter: brightness(1.05);
 }
 
 .valor {
@@ -1476,6 +1567,10 @@ button[type="submit"] {
 
   .form-app {
     padding: 12px max(12px, env(safe-area-inset-left, 0px)) max(24px, env(safe-area-inset-bottom, 12px)) max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  .photo-fields {
+    grid-template-columns: 1fr;
   }
 
   .form-header {
