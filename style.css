@@ -334,6 +334,15 @@ a {
   box-sizing: border-box;
 }
 
+/* display:flex acima ganha do [hidden] padrão — sem isso o login nunca “some” */
+.auth-gate[hidden] {
+  display: none !important;
+}
+
+#app-shell[hidden] {
+  display: none !important;
+}
+
 .auth-gate-card {
   width: 100%;
   max-width: 400px;
