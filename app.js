@@ -1,4 +1,7 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxpyz5mKI6oej5f5umOrV-tkAvtumI5X8E-o9Hna8YP5ZR9l2iUZtJwaIqFy-Vmcfxw/exec";
+/**
+ * Versão local (brinde / venda): sem Google Drive.
+ * Dados em IndexedDB neste aparelho, com fallback em localStorage.
+ */
 
 const flow = [
   "entrada",
@@ -41,7 +44,66 @@ const SERVICOS_PADRAO = [
   },
 ];
 
-const LS_CATALOGO_KEY = "luthier-catalogo-v1";
+const IDB_NAME = "luthier-os-local-v1";
+const IDB_STORE = "kv";
+const IDB_KEY_SERVICOS = "servicos";
+const IDB_KEY_CATALOGO = "catalogo";
+const LS_FALLBACK = "luthier-os-servicos-v1";
+const LS_CATALOGO_KEY = "luthier-catalogo-local-v1";
+const IDB_VER = 1;
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error("indexedDB indisponível"));
+      return;
+    }
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onerror = () => reject(req.error);
+    req.onupgradeneeded = event => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+  });
+}
+
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readonly");
+    const g = tx.objectStore(IDB_STORE).get(key);
+    g.onerror = () => reject(g.error);
+    g.onsuccess = () => resolve(g.result);
+  });
+}
+
+async function idbPut(key, val) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.onerror = () => reject(tx.error);
+    tx.oncomplete = () => resolve();
+    tx.objectStore(IDB_STORE).put(val, key);
+  });
+}
+
+function lsRead() {
+  try {
+    const t = localStorage.getItem(LS_FALLBACK);
+    if (!t) return null;
+    return JSON.parse(t);
+  } catch {
+    return null;
+  }
+}
+
+function lsWrite(payload) {
+  localStorage.setItem(LS_FALLBACK, JSON.stringify(payload));
+}
+
 let catalogoAtual = [];
 
 function catalogoPadrao() {
@@ -63,22 +125,42 @@ function normalizarCatalogo(arr) {
   return out.length ? out : catalogoPadrao();
 }
 
-function loadCatalogoLocal() {
+async function loadCatalogoInMemory() {
   try {
-    const t = localStorage.getItem(LS_CATALOGO_KEY);
-    if (!t) {
-      catalogoAtual = catalogoPadrao();
+    const c = await idbGet(IDB_KEY_CATALOGO);
+    if (Array.isArray(c) && c.length) {
+      catalogoAtual = normalizarCatalogo(c);
       return;
     }
-    const c = JSON.parse(t);
-    catalogoAtual = Array.isArray(c) && c.length ? normalizarCatalogo(c) : catalogoPadrao();
+  } catch {}
+  try {
+    const t = localStorage.getItem(LS_CATALOGO_KEY);
+    if (t) {
+      const c = JSON.parse(t);
+      if (Array.isArray(c) && c.length) {
+        catalogoAtual = normalizarCatalogo(c);
+        return;
+      }
+    }
+  } catch {}
+  catalogoAtual = catalogoPadrao();
+}
+
+async function saveCatalogo() {
+  try {
+    await idbPut(IDB_KEY_CATALOGO, catalogoAtual);
   } catch {
-    catalogoAtual = catalogoPadrao();
+    localStorage.setItem(LS_CATALOGO_KEY, JSON.stringify(catalogoAtual));
   }
 }
 
-function saveCatalogoLocal() {
-  localStorage.setItem(LS_CATALOGO_KEY, JSON.stringify(catalogoAtual));
+function atualizarIndicadorArmazenamento() {
+  const el = document.getElementById("storage-hint");
+  if (!el) return;
+  const n = servicos.length;
+  el.textContent = n === 0
+    ? "Dados só neste aparelho. Use backup JSON antes de trocar de celular ou limpar o navegador."
+    : `${n} OS salvas neste aparelho · faça backup com frequência.`;
 }
 
 let editingId = null;
@@ -86,6 +168,7 @@ let servicos = [];
 let currentStatusIndex = 0;
 let valorManual = false;
 let filtroBusca = "";
+let fotosFormState = { antes: "", depois: "" };
 
 const formContainer = document.getElementById("form-container");
 
@@ -102,6 +185,77 @@ function escapeAttr(s) {
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function normalizarFotosServico(s) {
+  const f = s?.fotos;
+  if (!f || typeof f !== "object") {
+    s.fotos = { antes: "", depois: "" };
+    return;
+  }
+  s.fotos = {
+    antes: typeof f.antes === "string" ? f.antes : "",
+    depois: typeof f.depois === "string" ? f.depois : ""
+  };
+}
+
+function atualizarPreviewFoto(tipo) {
+  const isAntes = tipo === "antes";
+  const preview = document.getElementById(isAntes ? "fotoAntesPreview" : "fotoDepoisPreview");
+  const remover = document.getElementById(isAntes ? "fotoAntesRemover" : "fotoDepoisRemover");
+  const valor = fotosFormState[tipo] || "";
+  if (!preview || !remover) return;
+  if (!valor) {
+    preview.hidden = true;
+    preview.removeAttribute("src");
+    remover.hidden = true;
+    return;
+  }
+  preview.src = valor;
+  preview.hidden = false;
+  remover.hidden = false;
+}
+
+function atualizarPreviewsFotosForm() {
+  atualizarPreviewFoto("antes");
+  atualizarPreviewFoto("depois");
+}
+
+function resetFotosForm() {
+  fotosFormState = { antes: "", depois: "" };
+  const inputAntes = document.getElementById("fotoAntesInput");
+  const inputDepois = document.getElementById("fotoDepoisInput");
+  if (inputAntes) inputAntes.value = "";
+  if (inputDepois) inputDepois.value = "";
+  atualizarPreviewsFotosForm();
+}
+
+function carregarFotosNoForm(fotos) {
+  fotosFormState = {
+    antes: fotos?.antes || "",
+    depois: fotos?.depois || ""
+  };
+  atualizarPreviewsFotosForm();
+}
+
+async function processarFotoArquivo(file) {
+  if (!file) return "";
+  if (!file.type || !file.type.startsWith("image/")) {
+    throw new Error("Arquivo não é imagem");
+  }
+  const bitmap = await createImageBitmap(file);
+  const maxLado = 1600;
+  const escala = Math.min(1, maxLado / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * escala));
+  const h = Math.max(1, Math.round(bitmap.height * escala));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas indisponível");
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", 0.82);
 }
 
 function parseValorReais(raw) {
@@ -299,7 +453,7 @@ function abrirEditorCatalogo() {
   abrirModal({
     title: "Tabela de serviços e preços",
     bodyHTML: `
-      <p class="modal-hint">Ajuste preços e nomes, inclua ou remova linhas. A checklist e o total automático usam esta tabela. OS já salvas mantêm os textos de quando foram criadas.</p>
+      <p class="modal-hint">Edite valores, inclua linhas ou remova serviços que você não usa. Isso afeta a checklist e o cálculo automático do orçamento. OS já salvas continuam com os nomes gravados na época.</p>
       <div id="catalog-rows">${rowsHtml}</div>
       <button type="button" class="btn-modal-secondary catalog-add-btn" id="catalog-add" style="width:100%;margin-top:10px">＋ Incluir serviço</button>`,
     footerButtons: [
@@ -309,7 +463,7 @@ function abrirEditorCatalogo() {
         onClick: async () => {
           if (!confirm("Substituir toda a tabela pelos valores iniciais do aplicativo?")) return;
           catalogoAtual = catalogoPadrao();
-          saveCatalogoLocal();
+          await saveCatalogo();
           fecharModal();
           renderChecklist();
           showToast("Tabela padrão restaurada");
@@ -330,7 +484,7 @@ function abrirEditorCatalogo() {
             return;
           }
           catalogoAtual = novo;
-          saveCatalogoLocal();
+          await saveCatalogo();
           fecharModal();
           renderChecklist();
           showToast("Tabela salva");
@@ -443,19 +597,35 @@ function garantirArrayPagamentos(s) {
 }
 
 async function load() {
-  const res = await fetch(API_URL);
-  servicos = await res.json();
+  try {
+    let rows = await idbGet(IDB_KEY_SERVICOS);
+    if (rows == null) {
+      rows = lsRead();
+    }
+    servicos = Array.isArray(rows) ? rows : [];
+  } catch (e) {
+    const fallback = lsRead();
+    servicos = Array.isArray(fallback) ? fallback : [];
+    console.warn("Armazenamento local:", e);
+  }
   if (!Array.isArray(servicos)) servicos = [];
   servicos.forEach(garantirArrayPagamentos);
+  servicos.forEach(normalizarFotosServico);
   render();
+  atualizarIndicadorArmazenamento();
 }
 
 async function save() {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify(servicos)
-  });
-  if (!res.ok) throw new Error("Falha ao salvar (" + res.status + ")");
+  try {
+    await idbPut(IDB_KEY_SERVICOS, servicos);
+  } catch (e) {
+    try {
+      lsWrite(servicos);
+    } catch (e2) {
+      throw new Error("Não foi possível gravar neste aparelho");
+    }
+  }
+  atualizarIndicadorArmazenamento();
 }
 
 function corStatus(status) {
@@ -518,6 +688,7 @@ function formatarStatus(status) {
 
 function renderCard(s, statusColuna = null) {
   garantirArrayPagamentos(s);
+  normalizarFotosServico(s);
 
   const base = (s.orcamento || 0)
     - (Number(s.extraValor) || 0)
@@ -531,6 +702,11 @@ function renderCard(s, statusColuna = null) {
   const mostrarFinanceiro = total > 0 || recebido > 0;
 
   const idAttr = escapeAttr(s.id);
+  const fotosHtml = (s.fotos.antes || s.fotos.depois) ? `
+  <div class="card-fotos">
+    ${s.fotos.antes ? `<button type="button" class="foto-chip" data-action="view-photo" data-id="${idAttr}" data-label="Antes" data-src="${escapeAttr(s.fotos.antes)}"><img src="${escapeAttr(s.fotos.antes)}" alt="Foto antes"><span>Antes</span></button>` : ""}
+    ${s.fotos.depois ? `<button type="button" class="foto-chip" data-action="view-photo" data-id="${idAttr}" data-label="Depois" data-src="${escapeAttr(s.fotos.depois)}"><img src="${escapeAttr(s.fotos.depois)}" alt="Foto depois"><span>Depois</span></button>` : ""}
+  </div>` : "";
   const notasBlock = (s.notasInternas && String(s.notasInternas).trim())
     ? `<details class="card-notas"><summary>Notas da oficina</summary><div class="notas-body">${escapeHtml(s.notasInternas)}</div></details>`
     : "";
@@ -567,6 +743,7 @@ function renderCard(s, statusColuna = null) {
         </div>
         <div class="data">${formatarData(s.data)}</div>
       </div>
+      ${fotosHtml}
       ${notasBlock}
       ${(s.servicos?.length || s.extraNome) ? `
         <div class="card-servicos">
@@ -607,6 +784,9 @@ function renderCard(s, statusColuna = null) {
           <button type="button" class="card-action" data-action="wa" data-id="${idAttr}" title="WhatsApp">📲</button>
           <button type="button" class="card-action" data-action="edit" data-id="${idAttr}" title="Editar OS">✏️</button>
           <button type="button" class="card-action" data-action="next" data-id="${idAttr}" title="Próxima etapa">➡️</button>
+          ${(s.status || "entrada") === "entregue"
+      ? `<button type="button" class="card-action" data-action="archive" data-id="${idAttr}" title="Arquivar OS">📦</button>`
+      : ""}
           <button type="button" class="card-action" data-action="pay" data-id="${idAttr}" title="Registrar recebimento">💵</button>
           <button type="button" class="card-action danger" data-action="delete" data-id="${idAttr}" title="Excluir OS">🗑️</button>
         </div>
@@ -689,8 +869,14 @@ function onKanbanClick(e) {
     case "pay":
       abrirPagamento(id);
       break;
+    case "archive":
+      confirmarArquivamento(id);
+      break;
     case "delete":
       excluirServico(id);
+      break;
+    case "view-photo":
+      abrirVisualizacaoFoto(btn.dataset.src, btn.dataset.label);
       break;
     case "edit-pay": {
       const i = Number(btn.dataset.index);
@@ -702,20 +888,41 @@ function onKanbanClick(e) {
       removerPagamento(id, i);
       break;
     }
+    case "unarchive":
+      confirmarDesarquivamento(id);
+      break;
     default:
       break;
   }
 }
 
+function abrirVisualizacaoFoto(src, label = "Foto") {
+  if (!src) return;
+  abrirModal({
+    title: label,
+    bodyHTML: `<img src="${escapeAttr(src)}" alt="${escapeAttr(label)}" style="width:100%;height:auto;border-radius:12px;display:block">`,
+    footerButtons: [{ label: "Fechar", onClick: () => fecharModal() }]
+  });
+}
+
 function abrirWhatsApp(s) {
   const url = gerarLinkWhatsApp(s.telefone, s.cliente, s.status || "entrada", s.orcamento);
   if (url !== "#") window.open(url, "_blank");
-  else showToast("Cadastre o telefone na OS");
+  else showToast("Telefone invalido na OS");
+}
+
+function normalizarNumeroWhatsApp(telefone) {
+  const digits = String(telefone || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length >= 12) return digits;
+  if (digits.length >= 10) return `55${digits}`;
+  return "";
 }
 
 function gerarLinkWhatsApp(telefone, nome, status, valor) {
   if (!telefone) return "#";
-  const numero = telefone.replace(/\D/g, "");
+  const numero = normalizarNumeroWhatsApp(telefone);
+  if (!numero) return "#";
   const v = valor || "0";
   const n = nome || "cliente";
   let mensagem = "";
@@ -729,7 +936,7 @@ function gerarLinkWhatsApp(telefone, nome, status, valor) {
     default:
       mensagem = `Olá ${n}`;
   }
-  return `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
+  return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
 }
 
 function abrirPagamento(id) {
@@ -902,6 +1109,69 @@ async function arquivarServico(id) {
   }
 }
 
+function confirmarArquivamento(id) {
+  const servico = servicos.find(s => s.id === id);
+  if (!servico) return;
+  if (servico.arquivado) {
+    showToast("Essa OS ja esta no historico");
+    return;
+  }
+  if ((servico.status || "entrada") !== "entregue") {
+    showToast("Arquivamento liberado apenas para OS concluidas (Entregue)");
+    return;
+  }
+  abrirModal({
+    title: "Arquivar ordem de serviço",
+    bodyHTML: `<p>Arquivar a OS <strong>${escapeHtml(servico.id)}</strong> — ${escapeHtml(servico.cliente || "")}?</p><p class="modal-hint">Ela sai do quadro e pode ser vista em Histórico.</p>`,
+    footerButtons: [
+      { label: "Cancelar", onClick: () => fecharModal() },
+      {
+        label: "Arquivar",
+        primary: true,
+        onClick: async () => {
+          fecharModal();
+          await arquivarServico(id);
+          showToast("OS arquivada no historico");
+        }
+      }
+    ]
+  });
+}
+
+async function desarquivarServico(id) {
+  const idx = servicos.findIndex(s => s.id === id);
+  if (idx === -1) return;
+  servicos[idx].arquivado = false;
+  render();
+  try {
+    await save();
+  } catch (e) {
+    await load();
+  }
+}
+
+function confirmarDesarquivamento(id) {
+  const servico = servicos.find(s => s.id === id);
+  if (!servico) return;
+  abrirModal({
+    title: "Desarquivar ordem de serviço",
+    bodyHTML: `<p>Trazer a OS <strong>${escapeHtml(servico.id)}</strong> de volta para o quadro?</p><p class="modal-hint">Ela volta para a coluna atual: <strong>${escapeHtml(formatarStatus(servico.status || "entrada"))}</strong>.</p>`,
+    footerButtons: [
+      { label: "Cancelar", onClick: () => fecharModal() },
+      {
+        label: "Desarquivar",
+        primary: true,
+        onClick: async () => {
+          fecharModal();
+          await desarquivarServico(id);
+          showToast("OS desarquivada");
+          verArquivados();
+        }
+      }
+    ]
+  });
+}
+
 function verArquivados() {
   const kanban = document.getElementById("kanban");
   const arquivados = servicos.filter(s => s.arquivado);
@@ -919,6 +1189,11 @@ function verArquivados() {
         ${escapeHtml(s.instrumento || "")}<br>
         ${s.orcamento ? `<div class="valor">R$ ${escapeHtml(String(s.orcamento))}</div>` : ""}
         <small>${escapeHtml(formatarStatus(s.status))}</small>
+        <div class="card-footer">
+          <div class="card-actions">
+            <button type="button" class="card-action" data-action="unarchive" data-id="${escapeAttr(s.id)}" title="Desarquivar OS">↩️</button>
+          </div>
+        </div>
       </div>
     `).join("")}`;
 
@@ -936,15 +1211,78 @@ function exportarBackup() {
   const a = document.createElement("a");
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
   a.href = URL.createObjectURL(blob);
-  a.download = `backup-os-luthieria-${stamp}.json`;
+  a.download = `backup-os-local-luthieria-${stamp}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
   showToast("Backup baixado (OS + tabela de preços)");
 }
 
+function onImportFileChange(e) {
+  const f = e.target.files?.[0];
+  e.target.value = "";
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result));
+      const legacyArray = Array.isArray(data);
+      const pacote = !legacyArray && data && typeof data === "object" && data.v === 1 && Array.isArray(data.servicos);
+
+      if (!legacyArray && !pacote) {
+        showToast("Arquivo inválido: use um backup deste app (JSON)");
+        return;
+      }
+
+      const nOs = pacote ? data.servicos.length : data.length;
+      const temCatalogo = pacote && Array.isArray(data.catalogo) && data.catalogo.length;
+
+      abrirModal({
+        title: "Restaurar backup",
+        bodyHTML: `
+          <p>O arquivo contém <strong>${nOs}</strong> ordem(ns) de serviço.</p>
+          ${temCatalogo ? "<p>Também há uma <strong>tabela de preços</strong> no arquivo.</p>" : ""}
+          <p class="modal-hint">Isso <strong>substitui</strong> os dados neste aparelho. Faça um backup atual antes, se precisar.</p>`,
+        footerButtons: [
+          { label: "Cancelar", onClick: () => fecharModal() },
+          {
+            label: "Substituir tudo aqui",
+            danger: true,
+            onClick: async () => {
+              if (pacote) {
+                servicos = data.servicos;
+                servicos.forEach(garantirArrayPagamentos);
+                if (temCatalogo) {
+                  catalogoAtual = normalizarCatalogo(data.catalogo);
+                  await saveCatalogo();
+                }
+              } else {
+                servicos = data;
+                servicos.forEach(garantirArrayPagamentos);
+              }
+              fecharModal();
+              render();
+              renderChecklist();
+              try {
+                await save();
+                showToast("Backup restaurado");
+              } catch (err) {
+                showToast("Erro ao gravar após importar");
+              }
+            }
+          }
+        ]
+      });
+    } catch (err) {
+      showToast("JSON inválido ou arquivo corrompido");
+    }
+  };
+  reader.readAsText(f, "UTF-8");
+}
+
 function editar(id) {
   const s = servicos.find(x => x.id === id);
   if (!s) return;
+  normalizarFotosServico(s);
 
   document.getElementById("form-title").textContent = "Editar ordem de serviço";
   document.getElementById("cliente").value = s.cliente || "";
@@ -958,6 +1296,7 @@ function editar(id) {
   document.getElementById("extraNome").value = s.extraNome || "";
   document.getElementById("extraValor").value = s.extraValor ?? "";
   document.getElementById("desconto").value = s.desconto ?? "";
+  carregarFotosNoForm(s.fotos);
 
   preencherChecklistSelecionado(s.servicos);
   valorManual = false;
@@ -996,7 +1335,11 @@ document.getElementById("form").addEventListener("submit", async e => {
     extraNome: document.getElementById("extraNome").value,
     extraValor: extra,
     desconto,
-    pagamento: document.getElementById("pagamento").value
+    pagamento: document.getElementById("pagamento").value,
+    fotos: {
+      antes: fotosFormState.antes || "",
+      depois: fotosFormState.depois || ""
+    }
   };
 
   if (editingId) {
@@ -1020,10 +1363,10 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   try {
     await save();
-    await load();
+    render();
     showToast("OS salva");
   } catch (err) {
-    showToast("Erro ao salvar");
+    showToast("Erro ao gravar localmente");
     await load();
   }
 
@@ -1034,6 +1377,7 @@ document.getElementById("form").addEventListener("submit", async e => {
   }, 700);
 
   e.target.reset();
+  resetFotosForm();
   renderChecklist();
   fecharForm();
   document.getElementById("form-title").textContent = "Nova ordem de serviço";
@@ -1067,10 +1411,10 @@ document.addEventListener("touchend", () => {
   endX = 0;
 });
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("modal-body").addEventListener("click", onCatalogRowRemoveClick);
 
-  loadCatalogoLocal();
+  await loadCatalogoInMemory();
   renderChecklist();
 
   document.getElementById("kanban").addEventListener("click", onKanbanClick);
@@ -1079,6 +1423,7 @@ window.addEventListener("DOMContentLoaded", () => {
     editingId = null;
     valorManual = false;
     document.getElementById("form").reset();
+    resetFotosForm();
     document.getElementById("form-title").textContent = "Nova ordem de serviço";
     renderChecklist();
     abrirForm();
@@ -1100,9 +1445,54 @@ window.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btn-backup").addEventListener("click", exportarBackup);
   document.getElementById("btn-catalogo")?.addEventListener("click", abrirEditorCatalogo);
+  document.getElementById("btn-import")?.addEventListener("click", () => {
+    document.getElementById("import-file").click();
+  });
+  document.getElementById("import-file")?.addEventListener("change", onImportFileChange);
 
   document.getElementById("modal-close").addEventListener("click", fecharModal);
   document.querySelector("#modal-root .modal-backdrop")?.addEventListener("click", fecharModal);
+
+  document.getElementById("fotoAntesBtn")?.addEventListener("click", () => {
+    document.getElementById("fotoAntesInput")?.click();
+  });
+  document.getElementById("fotoDepoisBtn")?.addEventListener("click", () => {
+    document.getElementById("fotoDepoisInput")?.click();
+  });
+  document.getElementById("fotoAntesRemover")?.addEventListener("click", () => {
+    fotosFormState.antes = "";
+    const el = document.getElementById("fotoAntesInput");
+    if (el) el.value = "";
+    atualizarPreviewFoto("antes");
+  });
+  document.getElementById("fotoDepoisRemover")?.addEventListener("click", () => {
+    fotosFormState.depois = "";
+    const el = document.getElementById("fotoDepoisInput");
+    if (el) el.value = "";
+    atualizarPreviewFoto("depois");
+  });
+  document.getElementById("fotoAntesInput")?.addEventListener("change", async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      fotosFormState.antes = await processarFotoArquivo(file);
+      atualizarPreviewFoto("antes");
+      showToast("Foto de antes adicionada");
+    } catch {
+      showToast("Nao foi possivel processar a foto");
+    }
+  });
+  document.getElementById("fotoDepoisInput")?.addEventListener("change", async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      fotosFormState.depois = await processarFotoArquivo(file);
+      atualizarPreviewFoto("depois");
+      showToast("Foto de depois adicionada");
+    } catch {
+      showToast("Nao foi possivel processar a foto");
+    }
+  });
 
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {

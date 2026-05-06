@@ -1,10 +1,12 @@
 {
-  "name": "Admin Serviços",
-  "short_name": "Serviços",
+  "name": "Painel de OS — Luthieria Baratieri",
+  "short_name": "OS Baratieri",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#0c0a09",
+  "theme_color": "#0c0a09",
   "icons": [
     {
       "src": "/assets/icon-192.png",

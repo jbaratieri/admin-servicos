@@ -1,5 +1,0 @@
-Coloque nesta pasta:
-  • logotipo.png   — logo do header (fallback: pode apagar o <img> no index ou usar PNG transparente pequeno)
-  • icon-192.png e icon-512.png — ícones do manifest PWA
-
-Você pode copiar da pasta `assets/` do projeto principal se já tiver lá.
