@@ -1,4 +1,7 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxpyz5mKI6oej5f5umOrV-tkAvtumI5X8E-o9Hna8YP5ZR9l2iUZtJwaIqFy-Vmcfxw/exec";
+/**
+ * Versão local (brinde / venda): sem Google Drive.
+ * Dados em IndexedDB neste aparelho, com fallback em localStorage.
+ */
 
 const flow = [
   "entrada",
@@ -41,7 +44,66 @@ const SERVICOS_PADRAO = [
   },
 ];
 
-const LS_CATALOGO_KEY = "luthier-catalogo-v1";
+const IDB_NAME = "luthier-os-local-v1";
+const IDB_STORE = "kv";
+const IDB_KEY_SERVICOS = "servicos";
+const IDB_KEY_CATALOGO = "catalogo";
+const LS_FALLBACK = "luthier-os-servicos-v1";
+const LS_CATALOGO_KEY = "luthier-catalogo-local-v1";
+const IDB_VER = 1;
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error("indexedDB indisponível"));
+      return;
+    }
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onerror = () => reject(req.error);
+    req.onupgradeneeded = event => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+  });
+}
+
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readonly");
+    const g = tx.objectStore(IDB_STORE).get(key);
+    g.onerror = () => reject(g.error);
+    g.onsuccess = () => resolve(g.result);
+  });
+}
+
+async function idbPut(key, val) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.onerror = () => reject(tx.error);
+    tx.oncomplete = () => resolve();
+    tx.objectStore(IDB_STORE).put(val, key);
+  });
+}
+
+function lsRead() {
+  try {
+    const t = localStorage.getItem(LS_FALLBACK);
+    if (!t) return null;
+    return JSON.parse(t);
+  } catch {
+    return null;
+  }
+}
+
+function lsWrite(payload) {
+  localStorage.setItem(LS_FALLBACK, JSON.stringify(payload));
+}
+
 let catalogoAtual = [];
 
 function catalogoPadrao() {
@@ -63,22 +125,42 @@ function normalizarCatalogo(arr) {
   return out.length ? out : catalogoPadrao();
 }
 
-function loadCatalogoLocal() {
+async function loadCatalogoInMemory() {
   try {
-    const t = localStorage.getItem(LS_CATALOGO_KEY);
-    if (!t) {
-      catalogoAtual = catalogoPadrao();
+    const c = await idbGet(IDB_KEY_CATALOGO);
+    if (Array.isArray(c) && c.length) {
+      catalogoAtual = normalizarCatalogo(c);
       return;
     }
-    const c = JSON.parse(t);
-    catalogoAtual = Array.isArray(c) && c.length ? normalizarCatalogo(c) : catalogoPadrao();
+  } catch {}
+  try {
+    const t = localStorage.getItem(LS_CATALOGO_KEY);
+    if (t) {
+      const c = JSON.parse(t);
+      if (Array.isArray(c) && c.length) {
+        catalogoAtual = normalizarCatalogo(c);
+        return;
+      }
+    }
+  } catch {}
+  catalogoAtual = catalogoPadrao();
+}
+
+async function saveCatalogo() {
+  try {
+    await idbPut(IDB_KEY_CATALOGO, catalogoAtual);
   } catch {
-    catalogoAtual = catalogoPadrao();
+    localStorage.setItem(LS_CATALOGO_KEY, JSON.stringify(catalogoAtual));
   }
 }
 
-function saveCatalogoLocal() {
-  localStorage.setItem(LS_CATALOGO_KEY, JSON.stringify(catalogoAtual));
+function atualizarIndicadorArmazenamento() {
+  const el = document.getElementById("storage-hint");
+  if (!el) return;
+  const n = servicos.length;
+  el.textContent = n === 0
+    ? "Dados só neste aparelho. Use backup JSON antes de trocar de celular ou limpar o navegador."
+    : `${n} OS salvas neste aparelho · faça backup com frequência.`;
 }
 
 let editingId = null;
@@ -299,7 +381,7 @@ function abrirEditorCatalogo() {
   abrirModal({
     title: "Tabela de serviços e preços",
     bodyHTML: `
-      <p class="modal-hint">Ajuste preços e nomes, inclua ou remova linhas. A checklist e o total automático usam esta tabela. OS já salvas mantêm os textos de quando foram criadas.</p>
+      <p class="modal-hint">Edite valores, inclua linhas ou remova serviços que você não usa. Isso afeta a checklist e o cálculo automático do orçamento. OS já salvas continuam com os nomes gravados na época.</p>
       <div id="catalog-rows">${rowsHtml}</div>
       <button type="button" class="btn-modal-secondary catalog-add-btn" id="catalog-add" style="width:100%;margin-top:10px">＋ Incluir serviço</button>`,
     footerButtons: [
@@ -309,7 +391,7 @@ function abrirEditorCatalogo() {
         onClick: async () => {
           if (!confirm("Substituir toda a tabela pelos valores iniciais do aplicativo?")) return;
           catalogoAtual = catalogoPadrao();
-          saveCatalogoLocal();
+          await saveCatalogo();
           fecharModal();
           renderChecklist();
           showToast("Tabela padrão restaurada");
@@ -330,7 +412,7 @@ function abrirEditorCatalogo() {
             return;
           }
           catalogoAtual = novo;
-          saveCatalogoLocal();
+          await saveCatalogo();
           fecharModal();
           renderChecklist();
           showToast("Tabela salva");
@@ -443,19 +525,34 @@ function garantirArrayPagamentos(s) {
 }
 
 async function load() {
-  const res = await fetch(API_URL);
-  servicos = await res.json();
+  try {
+    let rows = await idbGet(IDB_KEY_SERVICOS);
+    if (rows == null) {
+      rows = lsRead();
+    }
+    servicos = Array.isArray(rows) ? rows : [];
+  } catch (e) {
+    const fallback = lsRead();
+    servicos = Array.isArray(fallback) ? fallback : [];
+    console.warn("Armazenamento local:", e);
+  }
   if (!Array.isArray(servicos)) servicos = [];
   servicos.forEach(garantirArrayPagamentos);
   render();
+  atualizarIndicadorArmazenamento();
 }
 
 async function save() {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify(servicos)
-  });
-  if (!res.ok) throw new Error("Falha ao salvar (" + res.status + ")");
+  try {
+    await idbPut(IDB_KEY_SERVICOS, servicos);
+  } catch (e) {
+    try {
+      lsWrite(servicos);
+    } catch (e2) {
+      throw new Error("Não foi possível gravar neste aparelho");
+    }
+  }
+  atualizarIndicadorArmazenamento();
 }
 
 function corStatus(status) {
@@ -936,10 +1033,72 @@ function exportarBackup() {
   const a = document.createElement("a");
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
   a.href = URL.createObjectURL(blob);
-  a.download = `backup-os-luthieria-${stamp}.json`;
+  a.download = `backup-os-local-luthieria-${stamp}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
   showToast("Backup baixado (OS + tabela de preços)");
+}
+
+function onImportFileChange(e) {
+  const f = e.target.files?.[0];
+  e.target.value = "";
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result));
+      const legacyArray = Array.isArray(data);
+      const pacote = !legacyArray && data && typeof data === "object" && data.v === 1 && Array.isArray(data.servicos);
+
+      if (!legacyArray && !pacote) {
+        showToast("Arquivo inválido: use um backup deste app (JSON)");
+        return;
+      }
+
+      const nOs = pacote ? data.servicos.length : data.length;
+      const temCatalogo = pacote && Array.isArray(data.catalogo) && data.catalogo.length;
+
+      abrirModal({
+        title: "Restaurar backup",
+        bodyHTML: `
+          <p>O arquivo contém <strong>${nOs}</strong> ordem(ns) de serviço.</p>
+          ${temCatalogo ? "<p>Também há uma <strong>tabela de preços</strong> no arquivo.</p>" : ""}
+          <p class="modal-hint">Isso <strong>substitui</strong> os dados neste aparelho. Faça um backup atual antes, se precisar.</p>`,
+        footerButtons: [
+          { label: "Cancelar", onClick: () => fecharModal() },
+          {
+            label: "Substituir tudo aqui",
+            danger: true,
+            onClick: async () => {
+              if (pacote) {
+                servicos = data.servicos;
+                servicos.forEach(garantirArrayPagamentos);
+                if (temCatalogo) {
+                  catalogoAtual = normalizarCatalogo(data.catalogo);
+                  await saveCatalogo();
+                }
+              } else {
+                servicos = data;
+                servicos.forEach(garantirArrayPagamentos);
+              }
+              fecharModal();
+              render();
+              renderChecklist();
+              try {
+                await save();
+                showToast("Backup restaurado");
+              } catch (err) {
+                showToast("Erro ao gravar após importar");
+              }
+            }
+          }
+        ]
+      });
+    } catch (err) {
+      showToast("JSON inválido ou arquivo corrompido");
+    }
+  };
+  reader.readAsText(f, "UTF-8");
 }
 
 function editar(id) {
@@ -1020,10 +1179,10 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   try {
     await save();
-    await load();
+    render();
     showToast("OS salva");
   } catch (err) {
-    showToast("Erro ao salvar");
+    showToast("Erro ao gravar localmente");
     await load();
   }
 
@@ -1067,10 +1226,10 @@ document.addEventListener("touchend", () => {
   endX = 0;
 });
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("modal-body").addEventListener("click", onCatalogRowRemoveClick);
 
-  loadCatalogoLocal();
+  await loadCatalogoInMemory();
   renderChecklist();
 
   document.getElementById("kanban").addEventListener("click", onKanbanClick);
@@ -1100,6 +1259,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btn-backup").addEventListener("click", exportarBackup);
   document.getElementById("btn-catalogo")?.addEventListener("click", abrirEditorCatalogo);
+  document.getElementById("btn-import")?.addEventListener("click", () => {
+    document.getElementById("import-file").click();
+  });
+  document.getElementById("import-file")?.addEventListener("change", onImportFileChange);
 
   document.getElementById("modal-close").addEventListener("click", fecharModal);
   document.querySelector("#modal-root .modal-backdrop")?.addEventListener("click", fecharModal);

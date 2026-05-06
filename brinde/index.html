@@ -4,27 +4,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Ordens de serviço — Luthieria</title>
+  <title>Painel de OS — Luthieria Baratieri (uso local)</title>
+  <meta name="description"
+    content="Painel de ordens de serviço para luthieria: fluxo da oficina, valores e recebimentos. Dados no seu aparelho. Complemento ao ecossistema Luthieria Baratieri.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="./style.css">
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#0c0a09">
 </head>
 
-<body>
+<body class="layout-brinde">
 
-  <header class="app-header">
-    <div class="app-header-brand">
-      <img src="/assets/logotipo.png" alt="Logotipo">
-      <div class="app-header-text">
-        <span class="app-title">Oficina</span>
-        <span class="app-sub">Ordens de serviço</span>
-      </div>
+  <header class="app-header site-header" role="banner">
+    <div class="site-header-inner">
+      <a class="app-header-brand brand-link" href="https://luthieriabaratieri.com.br/" target="_blank"
+        rel="noopener noreferrer" title="Abrir site oficial — Luthieria Baratieri">
+        <img src="./assets/logotipo.png" alt="Luthieria Baratieri">
+        <div class="app-header-text">
+          <span class="app-title">Luthieria Baratieri</span>
+          <span class="app-sub">Painel de ordens de serviço</span>
+          
+        </div>
+      </a>
+      <button type="button" id="fab" class="fab" title="Nova ordem de serviço">＋ Nova OS</button>
     </div>
-    <button type="button" id="fab" class="fab" title="Nova ordem de serviço">＋ Nova OS</button>
   </header>
+  <!-- 
+  <section class="page-hero" aria-label="Sobre este painel">
+    <h1 class="page-hero-title">Controle da oficina em um só lugar</h1>
+    
+  </section> -->
 
   <div id="form-container" class="form-container" aria-hidden="true" role="dialog">
     <div class="form-header">
@@ -47,7 +60,8 @@
       <textarea id="problema" placeholder="O que o cliente relatou ou pediu"></textarea>
 
       <label class="field-label">Notas internas <span class="hint">(só oficina)</span></label>
-      <textarea id="notasInternas" class="textarea-notas" placeholder="Trastes 7–9 baixos, combinado retirada sábado…"></textarea>
+      <textarea id="notasInternas" class="textarea-notas"
+        placeholder="Trastes 7–9 baixos, combinado retirada sábado…"></textarea>
 
       <label class="field-label">Serviço extra</label>
       <input id="extraNome" placeholder="Descrição (opcional)">
@@ -89,7 +103,10 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <main class="main-area">
+  <input type="file" id="import-file" class="sr-only" accept="application/json,.json" aria-hidden="true">
+
+  <main class="main-area main-grow">
+    <p id="storage-hint" class="local-hint"></p>
     <div class="toolbar">
       <div class="toolbar-search">
         <span class="search-icon" aria-hidden="true">⌕</span>
@@ -108,6 +125,7 @@
         <button type="button" class="btn-toolbar" id="btn-historico" onclick="verArquivados()">Histórico</button>
         <button type="button" class="btn-toolbar btn-toolbar-secondary" id="btn-catalogo">Preços</button>
         <button type="button" class="btn-toolbar btn-toolbar-secondary" id="btn-backup">Backup JSON</button>
+        <button type="button" class="btn-toolbar btn-toolbar-secondary" id="btn-import">Importar JSON</button>
       </div>
     </div>
 
@@ -115,10 +133,32 @@
     <div id="kanban" class="kanban"></div>
   </main>
 
+  <footer class="site-footer" role="contentinfo">
+
+    <div class="site-footer-col-wide">
+      <p class="site-footer-copy">Gestão de OS</p>
+      <span>|</span>
+      <span class="app-tagline">Ecossistema Método Baratieri</span>
+    </div>
+   
+
+      <ul class="site-footer-links">
+        <li><a href="https://luthieriabaratieri.com.br/" target="_blank" rel="noopener noreferrer">Site oficial</a></li>
+        <li><a href="https://luthieriabaratieri.com.br/blog/" target="_blank" rel="noopener noreferrer">Blog</a></li>
+        <li><a href="https://metodo.luthieriabaratieri.com.br/metodo-baratieri-app-luthieria" class="site-footer-cta"
+            target="_blank" rel="noopener noreferrer">Método Baratieri</a></li>
+        <li><a href="https://metodo.luthieriabaratieri.com.br/parceiros-afiliados-metodo-baratieri" target="_blank"
+            rel="noopener noreferrer">Afiliados</a></li>
+      </ul>
+
+    
+    <p class="site-footer-legal">&copy; 2026 Luthieria Baratieri — Todos os direitos reservados</p>
+  </footer>
+
   <script src="app.js"></script>
   <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js");
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+      navigator.serviceWorker.register("./sw.js").catch(() => { });
     }
   </script>
 </body>
