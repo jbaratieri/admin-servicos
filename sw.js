@@ -1,6 +1,6 @@
 const CACHE_VERSION = "v1";
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
-const APP_SHELL_FILES = ["/", "/index.html", "/style.css", "/app.js", "/manifest.json"];
+const APP_SHELL_FILES = ["/", "/index.html", "/style.css", "/app.js", "/auth-gate.js", "/manifest.json"];
 
 self.addEventListener("install", event => {
   event.waitUntil(

@@ -17,7 +17,24 @@
   <meta name="theme-color" content="#0c0a09">
 </head>
 
-<body class="layout-brinde">
+<body>
+
+  <div id="auth-gate" class="auth-gate" role="dialog" aria-modal="true" aria-labelledby="auth-gate-title">
+    <div class="auth-gate-card">
+      <img class="auth-gate-logo" src="/assets/logotipo.png" alt="Luthieria Baratieri">
+      <h1 id="auth-gate-title" class="auth-gate-title">Painel de OS</h1>
+      <p class="auth-gate-lead">Digite o código de acesso que você recebeu.</p>
+      <form id="auth-gate-form" class="auth-gate-form">
+        <label class="sr-only" for="auth-code">Código de acesso</label>
+        <input id="auth-code" name="code" type="text" autocomplete="one-time-code" autocapitalize="characters"
+          placeholder="Código" required>
+        <button type="submit" class="auth-gate-submit">Entrar</button>
+      </form>
+      <p id="auth-gate-msg" class="auth-gate-msg" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div id="app-shell" class="layout-brinde" hidden aria-hidden="true">
 
   <header class="app-header site-header" role="banner">
     <div class="site-header-inner">
@@ -177,7 +194,10 @@
     <p class="site-footer-legal">&copy; 2026 Luthieria Baratieri — Todos os direitos reservados</p>
   </footer>
 
-  <script src="app.js"></script>
+  </div>
+
+  <script src="/auth-gate.js"></script>
+  <script src="/app.js"></script>
   <script>
     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
       navigator.serviceWorker.register("/sw.js").catch(() => { });

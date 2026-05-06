@@ -50,7 +50,18 @@ const IDB_KEY_SERVICOS = "servicos";
 const IDB_KEY_CATALOGO = "catalogo";
 const LS_FALLBACK = "luthier-os-servicos-v1";
 const LS_CATALOGO_KEY = "luthier-catalogo-local-v1";
+const LS_LAST_BACKUP_EXPORT_AT = "luthier-last-backup-export-at-v1";
+const LS_LAST_BACKUP_TOAST_AT = "luthier-last-backup-toast-at-v1";
 const IDB_VER = 1;
+
+const STORAGE_HINT_AUTO_HIDE_MS = 22000;
+const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
+const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
+const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
+
+let storageHintUserDismissed = false;
+let storageHintHideTimer = null;
+let backupToastAfterLoadTimer = null;
 
 function idbOpen() {
   return new Promise((resolve, reject) => {
@@ -154,6 +165,43 @@ async function saveCatalogo() {
   }
 }
 
+function lerTimestampLs(key) {
+  try {
+    const t = localStorage.getItem(key);
+    if (!t) return null;
+    const n = Number(t);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function marcarBackupExportado() {
+  try {
+    const now = String(Date.now());
+    localStorage.setItem(LS_LAST_BACKUP_EXPORT_AT, now);
+    localStorage.setItem(LS_LAST_BACKUP_TOAST_AT, now);
+  } catch {}
+}
+
+function tentarToastLembreteBackup() {
+  const now = Date.now();
+  const lastExport = lerTimestampLs(LS_LAST_BACKUP_EXPORT_AT);
+  const lastToast = lerTimestampLs(LS_LAST_BACKUP_TOAST_AT);
+  const semExportOuAntigo = !lastExport || (now - lastExport > BACKUP_CONSIDER_STALE_MS);
+  const respeitaIntervalo = !lastToast || (now - lastToast > BACKUP_TOAST_MIN_INTERVAL_MS);
+  if (!semExportOuAntigo || !respeitaIntervalo) return;
+  try {
+    localStorage.setItem(LS_LAST_BACKUP_TOAST_AT, String(now));
+  } catch {}
+  showToast("Lembrete: faça backup JSON de vez em quando — os dados ficam só neste aparelho.");
+}
+
+function agendarLembreteBackupAposCarregar() {
+  clearTimeout(backupToastAfterLoadTimer);
+  backupToastAfterLoadTimer = setTimeout(() => tentarToastLembreteBackup(), BACKUP_TOAST_AFTER_LOAD_MS);
+}
+
 function atualizarIndicadorArmazenamento() {
   const el = document.getElementById("storage-hint");
   if (!el) return;
@@ -161,6 +209,17 @@ function atualizarIndicadorArmazenamento() {
   el.textContent = n === 0
     ? "Dados só neste aparelho. Use backup JSON antes de trocar de celular ou limpar o navegador."
     : `${n} OS salvas neste aparelho · faça backup com frequência.`;
+
+  if (storageHintUserDismissed) return;
+
+  el.classList.remove("is-dismissed");
+  el.setAttribute("aria-hidden", "false");
+  clearTimeout(storageHintHideTimer);
+  storageHintHideTimer = setTimeout(() => {
+    el.classList.add("is-dismissed");
+    el.setAttribute("aria-hidden", "true");
+    storageHintUserDismissed = true;
+  }, STORAGE_HINT_AUTO_HIDE_MS);
 }
 
 let editingId = null;
@@ -613,6 +672,7 @@ async function load() {
   servicos.forEach(normalizarFotosServico);
   render();
   atualizarIndicadorArmazenamento();
+  agendarLembreteBackupAposCarregar();
 }
 
 async function save() {
@@ -1214,6 +1274,7 @@ function exportarBackup() {
   a.download = `backup-os-local-luthieria-${stamp}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
+  marcarBackupExportado();
   showToast("Backup baixado (OS + tabela de preços)");
 }
 
@@ -1411,7 +1472,10 @@ document.addEventListener("touchend", () => {
   endX = 0;
 });
 
-window.addEventListener("DOMContentLoaded", async () => {
+async function iniciarPainel() {
+  if (window.__osPainelIniciado) return;
+  window.__osPainelIniciado = true;
+
   document.getElementById("modal-body").addEventListener("click", onCatalogRowRemoveClick);
 
   await loadCatalogoInMemory();
@@ -1504,9 +1568,23 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    setTimeout(() => tentarToastLembreteBackup(), 600);
+  });
+
   load();
+}
+
+document.addEventListener("os-app-unlock", () => {
+  iniciarPainel();
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  const shell = document.getElementById("app-shell");
+  if (shell && !shell.hidden) iniciarPainel();
 });
 
 window.addEventListener("resize", () => {
-  render();
+  if (window.__osPainelIniciado) render();
 });

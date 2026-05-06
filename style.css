@@ -322,6 +322,102 @@ a {
   margin: 8px 0 12px;
 }
 
+/* ========== tela de acesso (códigos) ========== */
+.auth-gate {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(180deg, #1c1917 0%, #292524 45%, #fafaf9 45%);
+  box-sizing: border-box;
+}
+
+.auth-gate-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 28px 22px 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.auth-gate-logo {
+  height: 64px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+
+.auth-gate-title {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.auth-gate-lead {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.auth-gate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.auth-gate-form input {
+  width: 100%;
+  padding: 14px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.auth-gate-form input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.auth-gate-submit {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #ea580c 0%, #c2410c 100%);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(194, 65, 12, 0.35);
+}
+
+.auth-gate-submit:active {
+  transform: scale(0.99);
+}
+
+.auth-gate-msg {
+  margin: 14px 0 0;
+  min-height: 1.35em;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.auth-gate-msg.is-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
 /* ========== modo local ========== */
 .local-hint {
   margin: 0 0 10px;
@@ -332,6 +428,19 @@ a {
   background: linear-gradient(90deg, #fffbeb 0%, #fef3c7 100%);
   border: 1px solid #fcd34d;
   border-radius: var(--radius);
+  max-height: 200px;
+  opacity: 1;
+  overflow: hidden;
+  transition: opacity 0.35s ease, max-height 0.35s ease, margin 0.35s ease, padding 0.35s ease, border-color 0.35s ease;
+}
+
+.local-hint.is-dismissed {
+  opacity: 0;
+  max-height: 0;
+  margin: 0;
+  padding: 0;
+  border-color: transparent;
+  pointer-events: none;
 }
 
 /* ========== toolbar ========== */
