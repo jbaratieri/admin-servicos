@@ -6,6 +6,10 @@
   function showApp() {
     const gate = document.getElementById("auth-gate");
     const shell = document.getElementById("app-shell");
+    const active = document.activeElement;
+    if (gate && active && typeof active.blur === "function" && gate.contains(active)) {
+      active.blur();
+    }
     if (gate) {
       gate.hidden = true;
       gate.setAttribute("aria-hidden", "true");
