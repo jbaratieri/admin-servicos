@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const APP_SHELL_FILES = ["/", "/index.html", "/style.css", "/app.js", "/auth-gate.js", "/manifest.json"];
 

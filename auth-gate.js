@@ -1,5 +1,7 @@
 (function () {
   const SESSION_KEY = "os_gate_session_v1";
+  /** Evita que um verify antigo (async) apague o token novo após login bem-sucedido. */
+  let authEpoch = 0;
 
   function showApp() {
     const gate = document.getElementById("auth-gate");
@@ -46,7 +48,9 @@
   }
 
   async function init() {
+    const epoch = authEpoch;
     const ok = await verifyStored();
+    if (epoch !== authEpoch) return;
     if (ok) {
       showApp();
       return;
@@ -54,6 +58,7 @@
     try {
       localStorage.removeItem(SESSION_KEY);
     } catch (_) { /* ignore */ }
+    if (epoch !== authEpoch) return;
     showGate();
   }
 
@@ -92,7 +97,16 @@
         }
         return;
       }
-      localStorage.setItem(SESSION_KEY, data.token);
+      authEpoch += 1;
+      try {
+        localStorage.setItem(SESSION_KEY, data.token);
+      } catch (err) {
+        if (msg) {
+          msg.textContent = "Não foi possível guardar a sessão neste navegador.";
+          msg.classList.add("is-error");
+        }
+        return;
+      }
       if (msg) msg.textContent = "";
       showApp();
     } catch {
