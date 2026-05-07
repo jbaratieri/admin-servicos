@@ -421,6 +421,64 @@ function abrirModal({ title, bodyHTML, footerButtons }) {
   first?.focus();
 }
 
+const CONTATO_SUPORTE_OS = {
+  email: "baratieriluthieria@gmail.com",
+  telDisplay: "(45) 92002-8659",
+  telHref: "+5545920028659",
+  wa: "5545920028659"
+};
+
+function modalApenasFechar() {
+  return [{ label: "Fechar", onClick: () => fecharModal() }];
+}
+
+function abrirModalContatoOS() {
+  const { email, telDisplay, telHref, wa } = CONTATO_SUPORTE_OS;
+  abrirModal({
+    title: "Contato",
+    bodyHTML: `
+      <p class="modal-hint">Para recuperar o código de acesso ou falar sobre o painel:</p>
+      <ul class="modal-help-list">
+        <li><a href="mailto:${escapeAttr(email)}">${escapeHtml(email)}</a></li>
+        <li><a href="tel:${escapeAttr(telHref)}">${escapeHtml(telDisplay)}</a></li>
+        <li><a href="https://wa.me/${escapeAttr(wa)}" target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
+      </ul>`,
+    footerButtons: modalApenasFechar()
+  });
+}
+
+function abrirModalSobrePainelOS() {
+  abrirModal({
+    title: "Sobre o painel de OS",
+    bodyHTML: `
+      <div class="modal-prose">
+        <p>Este painel organiza <strong>ordens de serviço</strong> em colunas, do recebimento do instrumento até a entrega.</p>
+        <p>Os registros ficam <strong>só neste aparelho</strong> (navegador). Use <strong>Backup JSON</strong> com frequência para não perder o histórico.</p>
+        <p>Complemento ao ecossistema <strong>Método Baratieri</strong> / Luthieria Baratieri.</p>
+      </div>`,
+    footerButtons: modalApenasFechar()
+  });
+}
+
+function abrirModalManualPainelOS() {
+  abrirModal({
+    title: "Manual de uso (resumo)",
+    bodyHTML: `
+      <div class="modal-prose modal-prose-compact">
+        <ol class="modal-help-steps">
+          <li><strong>Acesso:</strong> informe o código recebido. Se perdeu, use <strong>Contato</strong> no rodapé (também na tela de login).</li>
+          <li><strong>Nova OS:</strong> <strong>＋ Nova OS</strong>, preencha os dados e salve. O card aparece em <em>Entrada</em>.</li>
+          <li><strong>Fluxo:</strong> no card, use <strong>➡️</strong> para avançar a etapa. No celular, deslize para alternar a coluna em foco.</li>
+          <li><strong>Busca:</strong> filtre por cliente, instrumento ou texto da OS.</li>
+          <li><strong>Preços:</strong> o botão <strong>Preços</strong> edita a tabela da checklist e do orçamento.</li>
+          <li><strong>Backup / importar:</strong> exporte JSON com regularidade. Importar substitui os dados locais — use só se souber o que está fazendo.</li>
+          <li><strong>Histórico:</strong> OS arquivadas ficam em <strong>Histórico</strong>.</li>
+        </ol>
+      </div>`,
+    footerButtons: modalApenasFechar()
+  });
+}
+
 function fmtBRL(n) {
   const x = Math.round(Number(n) * 100) / 100;
   return x.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -1516,6 +1574,10 @@ async function iniciarPainel() {
 
   document.getElementById("modal-close").addEventListener("click", fecharModal);
   document.querySelector("#modal-root .modal-backdrop")?.addEventListener("click", fecharModal);
+
+  document.getElementById("footer-help-contato")?.addEventListener("click", abrirModalContatoOS);
+  document.getElementById("footer-help-sobre")?.addEventListener("click", abrirModalSobrePainelOS);
+  document.getElementById("footer-help-manual")?.addEventListener("click", abrirModalManualPainelOS);
 
   document.getElementById("fotoAntesBtn")?.addEventListener("click", () => {
     document.getElementById("fotoAntesInput")?.click();

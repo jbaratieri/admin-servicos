@@ -10,11 +10,14 @@ function issueSessionToken(secret) {
 }
 
 function parseCodes() {
-  const raw = process.env.OS_ACCESS_CODES || "";
-  return raw
+  const list = process.env.OS_ACCESS_CODES || "";
+  const single = process.env.OS_ACCESS_CODE || "";
+  const raw = [list, single].filter(Boolean).join(",");
+  const out = raw
     .split(/[,;\n\r]+/)
     .map(s => s.trim().toUpperCase())
     .filter(Boolean);
+  return [...new Set(out)];
 }
 
 export default async function handler(req, res) {

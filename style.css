@@ -274,6 +274,41 @@ a {
   text-align: center;
 }
 
+.site-footer-divider {
+  opacity: 0.45;
+}
+
+.site-footer-help {
+  list-style: none;
+  margin: 0 auto 12px;
+  padding: 0 10px;
+  max-width: 1200px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 14px;
+}
+
+.site-footer-help-btn {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fdba74;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.site-footer-help-btn:hover {
+  color: #fed7aa;
+}
+
 .site-footer-col-wide {
   display: flex;
   justify-content: center;
@@ -425,6 +460,51 @@ a {
 .auth-gate-msg.is-error {
   color: var(--danger);
   font-weight: 600;
+}
+
+.auth-gate-help {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+
+.auth-gate-help-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.auth-gate-help-lead {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.auth-gate-contact {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.auth-gate-contact-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-gate-contact-link:hover {
+  text-decoration: underline;
+}
+
+.auth-gate-contact-sep {
+  margin: 0 0.28em;
+  color: var(--muted);
+  font-weight: 400;
 }
 
 /* ========== modo local ========== */
@@ -1383,6 +1463,57 @@ button[type="submit"] {
   font-size: 12px;
   color: var(--muted);
   margin-top: 6px;
+}
+
+.modal-body .modal-hint:first-child {
+  margin-top: 0;
+}
+
+.modal-prose {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.modal-prose p {
+  margin: 0 0 12px;
+}
+
+.modal-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.modal-prose-compact {
+  font-size: 13px;
+}
+
+.modal-help-list {
+  margin: 10px 0 0;
+  padding-left: 1.2em;
+  line-height: 1.6;
+}
+
+.modal-help-list li {
+  margin-bottom: 6px;
+}
+
+.modal-help-list a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.modal-help-steps {
+  margin: 0;
+  padding-left: 1.2em;
+  line-height: 1.55;
+}
+
+.modal-help-steps li {
+  margin-bottom: 10px;
+}
+
+.modal-help-steps li:last-child {
+  margin-bottom: 0;
 }
 
 .catalog-sep {
