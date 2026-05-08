@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v7";
+const CACHE_VERSION = "v8";
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const APP_SHELL_FILES = [
   "/",
@@ -49,9 +49,12 @@ async function cacheMatchBest(request) {
   let r = await caches.match(request);
   if (r) return r;
   r = await caches.match(request, { ignoreSearch: true });
-  if (r) return r;
+  return r || null;
+}
+
+async function cacheIndexFallback() {
   const indexUrl = new URL("/index.html", self.location.origin).href;
-  r = await caches.match(indexUrl);
+  let r = await caches.match(indexUrl);
   if (r) return r;
   return caches.match(new URL("/", self.location.origin).href);
 }
@@ -65,34 +68,61 @@ self.addEventListener("fetch", event => {
   /* APIs: rede direta — nunca devolver 503 sintético do SW */
   if (isApiRequest(requestUrl)) return;
 
-  event.respondWith(
-    (async () => {
-      const fromCache = await cacheMatchBest(event.request);
-      if (fromCache) return fromCache;
+  event.respondWith((async () => {
+    const isNavigate = event.request.mode === "navigate";
 
+    /* Navegação: prioriza rede para evitar "app preso" em versão antiga */
+    if (isNavigate) {
       try {
-        const response = await fetch(event.request);
-        if (response && response.status === 200 && response.type === "basic") {
+        const fresh = await fetch(event.request);
+        if (fresh && fresh.status === 200 && fresh.type === "basic") {
           try {
             const cache = await caches.open(APP_SHELL_CACHE);
-            await cache.put(event.request, response.clone());
+            await cache.put(event.request, fresh.clone());
           } catch {
             /* quota */
           }
         }
-        return response;
+        return fresh;
       } catch {
-        const again = await cacheMatchBest(event.request);
-        if (again) return again;
-
-        if (event.request.mode === "navigate") {
-          const idx = await caches.match(new URL("/index.html", self.location.origin).href);
-          if (idx) return idx;
-        }
-
-        /* recurso estático sem cache: 404 leve (evita 503 enganoso) */
+        const cachedNav = await cacheMatchBest(event.request);
+        if (cachedNav) return cachedNav;
+        const idx = await cacheIndexFallback();
+        if (idx) return idx;
         return new Response("", { status: 404, statusText: "Not in cache" });
       }
-    })()
-  );
+    }
+
+    /* Assets: cache first + atualização em background */
+    const fromCache = await cacheMatchBest(event.request);
+    if (fromCache) {
+      event.waitUntil((async () => {
+        try {
+          const fresh = await fetch(event.request);
+          if (fresh && fresh.status === 200 && fresh.type === "basic") {
+            const cache = await caches.open(APP_SHELL_CACHE);
+            await cache.put(event.request, fresh);
+          }
+        } catch {
+          /* offline */
+        }
+      })());
+      return fromCache;
+    }
+
+    try {
+      const response = await fetch(event.request);
+      if (response && response.status === 200 && response.type === "basic") {
+        try {
+          const cache = await caches.open(APP_SHELL_CACHE);
+          await cache.put(event.request, response.clone());
+        } catch {
+          /* quota */
+        }
+      }
+      return response;
+    } catch {
+      return new Response("", { status: 404, statusText: "Not in cache" });
+    }
+  })());
 });
