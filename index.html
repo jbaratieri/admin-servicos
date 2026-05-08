@@ -14,7 +14,11 @@
     rel="stylesheet">
   <link rel="stylesheet" href="./style.css">
   <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
   <meta name="theme-color" content="#0c0a09">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Painel OS">
 </head>
 
 <body>
@@ -214,7 +218,29 @@
 
   </div>
 
+  <div id="pwa-install-banner" class="pwa-install-banner" hidden role="region" aria-label="Instalar no aparelho">
+    <div class="pwa-install-inner">
+      <p class="pwa-install-title">Usar como aplicativo</p>
+      <p id="pwa-install-text-chrome" class="pwa-install-text" hidden>
+        Instale o <strong>Painel de OS</strong> na tela inicial ou na barra de tarefas para abrir direto, como um app.
+      </p>
+      <p id="pwa-install-text-ios" class="pwa-install-text" hidden>
+        No <strong>iPhone</strong> ou <strong>iPad</strong> (Safari): toque no botão <strong>Compartilhar</strong> e
+        em seguida <strong>Adicionar à Tela de Início</strong>.
+      </p>
+      <div class="pwa-install-actions">
+        <button type="button" id="pwa-install-btn" class="pwa-install-btn pwa-install-btn-primary" hidden>
+          Instalar
+        </button>
+        <button type="button" id="pwa-install-dismiss" class="pwa-install-btn pwa-install-btn-secondary">
+          Agora não
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="/auth-gate.js"></script>
+  <script src="/pwa-install.js"></script>
   <script src="/app.js"></script>
   <script>
     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {

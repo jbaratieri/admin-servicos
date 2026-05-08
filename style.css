@@ -1557,6 +1557,78 @@ button[type="submit"] {
   font-weight: 600;
 }
 
+/* ========== instalar PWA ========== */
+.pwa-install-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  padding: max(12px, env(safe-area-inset-bottom, 0px)) 16px 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+
+.pwa-install-inner {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 14px 16px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+}
+
+.pwa-install-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.pwa-install-text {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.pwa-install-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.pwa-install-btn {
+  border: none;
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.pwa-install-btn-primary {
+  background: linear-gradient(180deg, #ea580c 0%, #c2410c 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(194, 65, 12, 0.3);
+}
+
+.pwa-install-btn-secondary {
+  background: #f5f5f4;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+/* tela de login: cartão escuro atrás, banner continua legível no degradê claro */
+.auth-gate ~ .pwa-install-banner .pwa-install-inner {
+  box-shadow: 0 -4px 28px rgba(0, 0, 0, 0.12);
+}
+
 /* ========== toast ========== */
 .toast {
   position: fixed;
