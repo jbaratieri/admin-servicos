@@ -58,10 +58,12 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
+const APP_VERSION = "2.5.2";
 
 let storageHintUserDismissed = false;
 let storageHintHideTimer = null;
 let backupToastAfterLoadTimer = null;
+let swUpdatePromptAt = 0;
 
 function idbOpen() {
   return new Promise((resolve, reject) => {
@@ -624,6 +626,60 @@ function showToast(msg) {
   el.classList.add("is-visible");
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => el.classList.remove("is-visible"), 2600);
+}
+
+function preencherVersaoRodape() {
+  const el = document.getElementById("app-version-badge");
+  if (!el) return;
+  el.textContent = `v${APP_VERSION}`;
+}
+
+function mostrarAvisoAtualizacao() {
+  const now = Date.now();
+  if (now - swUpdatePromptAt < 3500) return;
+  swUpdatePromptAt = now;
+  showToast("Nova versão disponível. Toque aqui para atualizar.");
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+  toast.style.cursor = "pointer";
+  const onClick = () => {
+    window.location.reload();
+  };
+  toast.addEventListener("click", onClick, { once: true });
+  setTimeout(() => {
+    toast.style.cursor = "";
+  }, 2800);
+}
+
+function monitorarAtualizacaoServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.ready.then(reg => {
+    if (!reg) return;
+
+    const tratarWaiting = () => {
+      if (!reg.waiting) return;
+      mostrarAvisoAtualizacao();
+      reg.waiting.postMessage({ type: "SKIP_WAITING" });
+    };
+
+    if (reg.waiting) tratarWaiting();
+
+    reg.addEventListener("updatefound", () => {
+      const nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener("statechange", () => {
+        if (nw.state === "installed" && navigator.serviceWorker.controller) {
+          tratarWaiting();
+        }
+      });
+    });
+  }).catch(() => {});
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (window.__osSwReloading) return;
+    window.__osSwReloading = true;
+    window.location.reload();
+  });
 }
 
 /* ========== checklist ========== */
@@ -1643,6 +1699,8 @@ document.addEventListener("os-app-unlock", () => {
 });
 
 window.addEventListener("DOMContentLoaded", () => {
+  preencherVersaoRodape();
+  monitorarAtualizacaoServiceWorker();
   const shell = document.getElementById("app-shell");
   if (shell && !shell.hidden) iniciarPainel();
 });
