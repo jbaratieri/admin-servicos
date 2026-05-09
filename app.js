@@ -451,10 +451,10 @@ function abrirModalContatoOS() {
 
 function abrirModalSobrePainelOS() {
   abrirModal({
-    title: "Sobre o painel de OS",
+    title: "Sobre o Painel OS Baratieri",
     bodyHTML: `
       <div class="modal-prose">
-        <p>Este painel organiza <strong>ordens de serviço</strong> em colunas, do recebimento do instrumento até a entrega.</p>
+        <p>O <strong>Painel OS Baratieri</strong> organiza <strong>ordens de serviço</strong> em colunas, do recebimento do instrumento até a entrega.</p>
         <p>Os registros ficam <strong>só neste aparelho</strong> (navegador). Use <strong>Backup JSON</strong> com frequência para não perder o histórico.</p>
         <p>Complemento ao ecossistema <strong>Método Baratieri</strong> / Luthieria Baratieri.</p>
       </div>`,

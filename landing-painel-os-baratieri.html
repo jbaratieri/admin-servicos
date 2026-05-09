@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Painel OS Baratieri — Organize as ordens de serviço da sua luthieria</title>
+  <meta name="description"
+    content="Painel de OS em quadro Kanban: fluxo da oficina, orçamentos, recebimentos e backup. Licença única. Ecossistema Método Baratieri / Luthieria Baratieri.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fafaf9;
+      --surface: #ffffff;
+      --text: #1c1917;
+      --muted: #78716c;
+      --border: #e7e5e4;
+      --accent: #b45309;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+      --font: "DM Sans", system-ui, -apple-system, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      font-size: 16px;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+    }
+
+    a {
+      color: #0369a1;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 18px;
+    }
+
+    /* header */
+    .lp-header {
+      background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+      color: #fafaf9;
+      padding: 14px 0;
+      box-shadow: var(--shadow-md);
+    }
+
+    .lp-header-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .lp-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .lp-brand:focus-visible {
+      outline: 2px solid #fdba74;
+      outline-offset: 3px;
+      border-radius: 10px;
+    }
+
+    .lp-brand img {
+      height: 56px;
+      width: auto;
+      object-fit: contain;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .lp-brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .lp-brand-kicker {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #a8a29e;
+    }
+
+    .lp-brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .lp-nav-cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, #ea580c 0%, #c2410c 100%);
+      color: #fff !important;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none !important;
+      box-shadow: 0 2px 8px rgba(194, 65, 12, 0.35);
+    }
+
+    .lp-nav-cta:hover {
+      filter: brightness(1.05);
+    }
+
+    /* hero */
+    .lp-hero {
+      background: linear-gradient(180deg, #1c1917 0%, #292524 42%, #fafaf9 42%);
+      padding: 36px 18px 48px;
+    }
+
+    .lp-hero-card {
+      max-width: 720px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 32px 26px 28px;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .lp-hero h1 {
+      margin: 0 0 12px;
+      font-size: clamp(1.45rem, 4vw, 1.85rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+
+    .lp-hero-lead {
+      margin: 0 0 22px;
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .lp-price-tag {
+      display: inline-block;
+      margin-bottom: 18px;
+      padding: 8px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+      box-shadow: var(--shadow);
+    }
+
+    .lp-price-tag strong {
+      font-size: 1.15em;
+      letter-spacing: -0.02em;
+    }
+
+    .lp-cta-row {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    @media (min-width: 520px) {
+      .lp-cta-row {
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+    }
+
+    .lp-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 22px;
+      border: none;
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, #ea580c 0%, #c2410c 100%);
+      color: #fff;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(194, 65, 12, 0.35);
+    }
+
+    .lp-btn-primary:hover {
+      filter: brightness(1.06);
+    }
+
+    .lp-btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 22px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #f5f5f4;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 15px;
+      text-decoration: none;
+    }
+
+    .lp-btn-secondary:hover {
+      background: #e7e5e4;
+    }
+
+    .lp-hero-note {
+      margin: 16px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* sections */
+    .lp-section {
+      padding: 44px 0;
+    }
+
+    .lp-section.alt {
+      background: linear-gradient(180deg, #fffbeb 0%, #fafaf9 100%);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .lp-section h2 {
+      margin: 0 0 10px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .lp-section-intro {
+      margin: 0 0 28px;
+      max-width: 62ch;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .lp-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    @media (min-width: 640px) {
+      .lp-grid-2 {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .lp-grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .lp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .lp-card h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .lp-card p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .lp-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .lp-list {
+      margin: 0;
+      padding-left: 1.15em;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .lp-list li {
+      margin-bottom: 8px;
+    }
+
+    /* pricing block */
+    .lp-pricing {
+      text-align: center;
+      padding: 48px 0 56px;
+    }
+
+    .lp-pricing-box {
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 2px solid #ea580c;
+      border-radius: var(--radius-lg);
+      padding: 28px 22px 26px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .lp-pricing-box h2 {
+      margin: 0 0 8px;
+    }
+
+    .lp-pricing-amount {
+      font-size: 2.25rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--accent);
+      margin: 12px 0 6px;
+    }
+
+    .lp-pricing-box .lp-muted {
+      font-size: 14px;
+      color: var(--muted);
+      margin: 0 0 20px;
+    }
+
+    /* FAQ */
+    details.lp-faq {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+
+    details.lp-faq summary {
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    details.lp-faq p {
+      margin: 10px 0 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* footer */
+    .lp-footer {
+      background: linear-gradient(180deg, #292524 0%, #1c1917 100%);
+      color: #d6d3d1;
+      padding: 32px 18px 24px;
+      border-top: 3px solid #78350f;
+    }
+
+    .lp-footer-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .lp-footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px 18px;
+      list-style: none;
+      margin: 0 0 16px;
+      padding: 0;
+    }
+
+    .lp-footer-links a {
+      color: #fdba74;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .lp-footer small {
+      font-size: 11px;
+      line-height: 1.5;
+      color: #78716c;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="lp-header" role="banner">
+    <div class="lp-header-inner">
+      <a class="lp-brand" href="https://luthieriabaratieri.com.br/" target="_blank" rel="noopener noreferrer">
+        <img src="./assets/logotipo.png" alt="Luthieria Baratieri">
+        <div class="lp-brand-text">
+          <span class="lp-brand-kicker">Ecossistema Método Baratieri</span>
+          <span class="lp-brand-title">Painel OS Baratieri</span>
+        </div>
+      </a>
+      <a class="lp-nav-cta" href="#comprar">Quero o Painel OS — R$ 197</a>
+    </div>
+  </header>
+
+  <section class="lp-hero" aria-labelledby="lp-hero-title">
+    <div class="lp-hero-card">
+      <p class="lp-price-tag">Licença digital · <strong>R$ 197,00</strong></p>
+      <h1 id="lp-hero-title">Organize todas as ordens de serviço da sua luthieria em um quadro visual</h1>
+      <p class="lp-hero-lead">
+        Do recebimento do instrumento até a entrega: colunas por etapa, orçamento com tabela de serviços,
+        recebimentos e histórico. Pensado para quem já vive a oficina no dia a dia — no mesmo espírito do
+        <strong>Método Baratieri</strong>.
+      </p>
+      <div class="lp-cta-row">
+        <a id="comprar" class="lp-btn-primary" href="https://pay.hotmart.com/SEU_LINK_HOTMART_AQUI" target="_blank"
+          rel="noopener noreferrer">Comprar agora na Hotmart</a>
+        <a class="lp-btn-secondary" href="https://metodo.luthieriabaratieri.com.br/metodo-baratieri-app-luthieria"
+          target="_blank" rel="noopener noreferrer">Conhecer o Método Baratieri</a>
+      </div>
+      <p class="lp-hero-note">
+        Substitua o link acima pelo checkout oficial do produto assim que publicar na Hotmart.
+      </p>
+    </div>
+  </section>
+
+  <section class="lp-section" aria-labelledby="lp-problema">
+    <div class="wrap">
+      <h2 id="lp-problema">A oficina cresce — e a planilha vira gargalo</h2>
+      <p class="lp-section-intro">
+        Quem atende vários instrumentos por semana sabe: anotar no caderno, espalhar fotos no celular e lembrar
+        “em que pé está” cada cliente consome tempo e gera retrabalho. O <strong>Painel OS Baratieri</strong> coloca
+        tudo em um fluxo único, na tela do computador ou do celular.
+      </p>
+    </div>
+  </section>
+
+  <section class="lp-section alt" aria-labelledby="lp-solucao">
+    <div class="wrap">
+      <h2 id="lp-solucao">Um painel pensado para luthieria</h2>
+      <p class="lp-section-intro">
+        Interface simples, linguagem de oficina e foco no que importa: status da OS, valores e comunicação com o cliente.
+      </p>
+      <div class="lp-grid lp-grid-3">
+        <div class="lp-card">
+          <div class="lp-icon" aria-hidden="true">▦</div>
+          <h3>Quadro por etapas</h3>
+          <p>Entrada, diagnóstico, orçamento, em andamento, pronto e entregue — você vê o funil inteiro de relance.</p>
+        </div>
+        <div class="lp-card">
+          <div class="lp-icon" aria-hidden="true">✓</div>
+          <h3>Tabela de serviços e orçamento</h3>
+          <p>Checklist com preços editáveis, extras, desconto e total — sem planilha paralela.</p>
+        </div>
+        <div class="lp-card">
+          <div class="lp-icon" aria-hidden="true">💾</div>
+          <h3>Seus dados, no seu aparelho</h3>
+          <p>Armazenamento local com backup em JSON para você não perder o histórico ao trocar de equipamento.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section" aria-labelledby="lp-inclui">
+    <div class="wrap">
+      <h2 id="lp-inclui">O que você leva na licença</h2>
+      <p class="lp-section-intro">Tudo o que precisa para começar a usar no mesmo dia.</p>
+      <div class="lp-grid lp-grid-2">
+        <div class="lp-card">
+          <h3>Acesso ao aplicativo web (PWA)</h3>
+          <p>Use no navegador ou instale como atalho na tela inicial, como um app.</p>
+        </div>
+        <div class="lp-card">
+          <h3>Código de licença individual</h3>
+          <p>Após a compra na Hotmart, você recebe o código para liberar o painel no domínio oficial.</p>
+        </div>
+        <div class="lp-card">
+          <h3>Suporte de primeiro uso</h3>
+          <p>Canais de contato da Luthieria Baratieri para dúvidas de acesso e orientação inicial.</p>
+        </div>
+        <div class="lp-card">
+          <h3>Alinhado ao ecossistema Baratieri</h3>
+          <p>Combina com quem já aplica o Método e quer a mesma clareza na gestão das OS.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section alt" aria-labelledby="lp-como">
+    <div class="wrap">
+      <h2 id="lp-como">Como funciona depois da compra</h2>
+      <ol class="lp-list">
+        <li>Você finaliza o pagamento na Hotmart.</li>
+        <li>Recebe o material de acesso e o <strong>código de licença</strong> por e-mail.</li>
+        <li>Acessa o painel oficial, informa o código e começa a cadastrar suas ordens de serviço.</li>
+        <li>Faz backup periodicamente (o app lembra disso) para manter seus dados seguros.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="lp-pricing" id="preco" aria-labelledby="lp-preco-title">
+    <div class="wrap">
+      <div class="lp-pricing-box">
+        <h2 id="lp-preco-title">Investimento</h2>
+        <p class="lp-pricing-amount">R$ 197,00</p>
+        <p class="lp-muted">Pagamento único · licença para uso conforme termos enviados na compra</p>
+        <a class="lp-btn-primary" style="width:100%;max-width:320px;margin:0 auto;" href="https://pay.hotmart.com/SEU_LINK_HOTMART_AQUI"
+          target="_blank" rel="noopener noreferrer">Ir para a Hotmart</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section" aria-labelledby="lp-faq-title">
+    <div class="wrap">
+      <h2 id="lp-faq-title">Perguntas frequentes</h2>
+      <details class="lp-faq">
+        <summary>Preciso ter comprado o Método Baratieri para usar o Painel OS?</summary>
+        <p>Não necessariamente. O painel é um produto à parte; quem já usa o Método tende a se adaptar mais rápido pela linguagem e rotina de oficina.</p>
+      </details>
+      <details class="lp-faq">
+        <summary>Os dados ficam na nuvem?</summary>
+        <p>As OS ficam armazenadas localmente no seu navegador/aparelho. Por isso o backup em JSON é importante antes de trocar de celular ou limpar dados do site.</p>
+      </details>
+      <details class="lp-faq">
+        <summary>Funciona no celular?</summary>
+        <p>Sim. O painel é responsivo e pode ser instalado como PWA na tela inicial em navegadores compatíveis.</p>
+      </details>
+      <details class="lp-faq">
+        <summary>E se eu perder o código de acesso?</summary>
+        <p>Use os canais de contato informados no material da compra ou no próprio painel (login e rodapé) para solicitar suporte.</p>
+      </details>
+    </div>
+  </section>
+
+  <footer class="lp-footer" role="contentinfo">
+    <div class="lp-footer-inner">
+      <ul class="lp-footer-links">
+        <li><a href="https://luthieriabaratieri.com.br/" target="_blank" rel="noopener noreferrer">Site oficial</a></li>
+        <li><a href="mailto:baratieriluthieria@gmail.com">Contato por e-mail</a></li>
+        <li><a href="https://wa.me/5545920028659" target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
+      </ul>
+      <small>
+        Painel OS Baratieri · Ecossistema Método Baratieri / Luthieria Baratieri<br>
+        © Luthieria Baratieri — todos os direitos reservados
+      </small>
+    </div>
+  </footer>
+</body>
+
+</html>

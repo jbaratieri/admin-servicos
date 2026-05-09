@@ -1,6 +1,6 @@
 {
-  "name": "Painel de OS — Luthieria Baratieri",
-  "short_name": "OS Baratieri",
+  "name": "Painel OS Baratieri",
+  "short_name": "Painel OS",
   "id": "/",
   "start_url": "/",
   "scope": "/",
