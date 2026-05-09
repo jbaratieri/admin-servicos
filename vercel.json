@@ -1,0 +1,19 @@
+{
+  "redirects": [
+    {
+      "source": "/landing-painel-os-baratieri.html",
+      "destination": "/landing-painel-os-baratieri",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/landing-painel-os-baratieri",
+      "destination": "/landing-painel-os-baratieri.html"
+    },
+    {
+      "source": "/landing-painel-os-baratieri/",
+      "destination": "/landing-painel-os-baratieri.html"
+    }
+  ]
+}
