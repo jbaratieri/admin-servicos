@@ -1,13 +1,4 @@
-import crypto from "node:crypto";
-
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-
-function issueSessionToken(secret) {
-  const exp = Date.now() + SESSION_TTL_MS;
-  const nonce = crypto.randomBytes(16).toString("hex");
-  const sig = crypto.createHmac("sha256", secret).update(`${exp}|${nonce}`).digest("hex");
-  return `${exp}.${nonce}.${sig}`;
-}
+import { evaluateLicenseKey } from "../lib/airtable-license-check.js";
 
 function parseCodes() {
   const list = process.env.OS_ACCESS_CODES || "";
@@ -29,24 +20,43 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, msg: "method_not_allowed" });
   }
 
-  const codes = parseCodes();
-  if (!codes.length) {
-    return res.status(503).json({ ok: false, msg: "server_misconfigured" });
-  }
-
-  const secret = process.env.OS_SESSION_SECRET || "";
-  if (secret.length < 24) {
-    return res.status(503).json({ ok: false, msg: "server_misconfigured" });
-  }
-
   const body = typeof req.body === "object" && req.body !== null ? req.body : {};
   const code = String(body.code || "").trim().toUpperCase();
-  if (!code || !codes.includes(code)) {
-    return res.status(401).json({ ok: false, msg: "invalid_code" });
+  if (!code) {
+    return res.status(400).json({ ok: false, msg: "invalid_code" });
   }
 
-  const token = issueSessionToken(secret);
-  return res.status(200).json({ ok: true, token });
+  const envCodes = parseCodes();
+  if (envCodes.length && envCodes.includes(code)) {
+    return res.status(200).json({
+      ok: true,
+      plan_type: "vitalicio",
+      expires_at: null,
+      grace_days: 5,
+      bypass: "env_code",
+      server_time: new Date().toISOString()
+    });
+  }
+
+  const { status, body: out } = await evaluateLicenseKey(code);
+
+  if (status === 503) {
+    return res.status(503).json(out);
+  }
+  if (status === 400) {
+    return res.status(400).json(out);
+  }
+  if (status === 404) {
+    return res.status(401).json({ ok: false, msg: "license_not_found" });
+  }
+
+  if (out.ok === true) {
+    return res.status(200).json(out);
+  }
+
+  const msg = out.msg || "invalid_code";
+  const http = msg === "blocked" || msg === "expired" ? 403 : 401;
+  return res.status(http).json({ ok: false, msg, ...out });
 }
 
 export const config = {
