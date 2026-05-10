@@ -53,12 +53,20 @@ const getEmail = p => p?.data?.buyer?.email || p?.buyer?.email || p?.email || ""
 const getName = p => (p?.data?.buyer?.name || p?.buyer?.name || "").toString();
 const getTx = p => p?.data?.purchase?.transaction || p?.purchase?.transaction || "";
 
+/** Hotmart 2.x: `data.product.id` pode ser 0 no teste; id real em `data.product.content.products[0].id`. */
 function getProductId(payload) {
-  const pid =
-    payload?.data?.product?.id ??
-    payload?.product?.id ??
-    payload?.data?.content?.products?.[0]?.id;
-  return typeof pid === "string" ? parseInt(pid, 10) : pid;
+  const toNum = v => {
+    const n = typeof v === "string" ? parseInt(v, 10) : v;
+    return Number.isFinite(n) ? n : NaN;
+  };
+  const root = toNum(payload?.data?.product?.id ?? payload?.product?.id);
+  if (Number.isFinite(root) && root > 0) return root;
+  const nested = toNum(
+    payload?.data?.product?.content?.products?.[0]?.id ??
+      payload?.data?.content?.products?.[0]?.id
+  );
+  if (Number.isFinite(nested) && nested > 0) return nested;
+  return Number.isFinite(root) ? root : nested;
 }
 
 /** Painel OS: pagamento único → vitalício no Airtable (mesmo esquema da tabela licenses). */
@@ -69,7 +77,7 @@ function resolvePlanType() {
 function isAllowedProduct(payload) {
   if (!OS_PRODUCT_IDS.length) return true;
   const id = getProductId(payload);
-  if (!Number.isFinite(id)) return false;
+  if (!Number.isFinite(id) || id <= 0) return false;
   return OS_PRODUCT_IDS.includes(id);
 }
 
