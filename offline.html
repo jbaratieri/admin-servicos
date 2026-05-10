@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Você está offline — Painel OS Baratieri</title>
+  <link rel="icon" href="/assets/icon-192.png" type="image/png">
+  <style>
+    :root {
+      --cor-fundo: #f4f0ea;
+      --cor-caixa: #fff;
+      --cor-borda: #e5dccf;
+      --cor-texto: #3a2d1c;
+      --cor-botao: #8a623f;
+      --cor-botao-hover: #5c3b1e;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      text-align: center;
+      background: var(--cor-fundo);
+      color: var(--cor-texto);
+      margin: 0;
+      padding: 2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .offline-box {
+      max-width: 420px;
+      background: var(--cor-caixa);
+      border: 1px solid var(--cor-borda);
+      border-radius: 14px;
+      padding: 2em;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+
+    .offline-box img {
+      width: 96px;
+      height: 96px;
+      margin-bottom: 1em;
+      border-radius: 18px;
+      object-fit: contain;
+    }
+
+    h1 {
+      font-size: 1.5em;
+      margin: 0.3em 0 0.6em;
+      color: var(--cor-botao);
+    }
+
+    p {
+      font-size: 1em;
+      line-height: 1.6;
+      margin-bottom: 1.6em;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6em;
+      align-items: center;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      background: var(--cor-botao);
+      color: #fff;
+      font-size: 1em;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease;
+      width: 180px;
+    }
+
+    button:hover {
+      background: var(--cor-botao-hover);
+      transform: scale(1.03);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 1.5em; }
+      .offline-box { padding: 1.5em; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="offline-box">
+    <img src="/assets/icon-192.png" alt="Painel OS Baratieri">
+    <h1>Você está offline</h1>
+    <p>O <strong>Painel OS Baratieri</strong> guarda as ordens de serviço no seu aparelho e continua utilizável sem internet na maior parte do tempo.<br>
+       Para <strong>validar a licença</strong> ou receber atualizações, é preciso conexão.</p>
+
+    <div class="btn-group">
+      <button type="button" onclick="location.reload()">Tentar novamente</button>
+      <button type="button" onclick="window.location.href='/'">Voltar ao painel</button>
+    </div>
+  </main>
+</body>
+</html>

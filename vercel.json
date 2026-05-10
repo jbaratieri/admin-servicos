@@ -4,6 +4,21 @@
       "source": "/painel-os-baratieri.html",
       "destination": "/painel-os-baratieri",
       "permanent": true
+    },
+    {
+      "source": "/resgatar.html",
+      "destination": "/resgatar",
+      "permanent": true
+    },
+    {
+      "source": "/boasvindas.html",
+      "destination": "/boasvindas",
+      "permanent": true
+    },
+    {
+      "source": "/offline.html",
+      "destination": "/offline",
+      "permanent": true
     }
   ],
   "rewrites": [
@@ -14,6 +29,30 @@
     {
       "source": "/painel-os-baratieri/",
       "destination": "/painel-os-baratieri.html"
+    },
+    {
+      "source": "/resgatar",
+      "destination": "/resgatar.html"
+    },
+    {
+      "source": "/resgatar/",
+      "destination": "/resgatar.html"
+    },
+    {
+      "source": "/boasvindas",
+      "destination": "/boasvindas.html"
+    },
+    {
+      "source": "/boasvindas/",
+      "destination": "/boasvindas.html"
+    },
+    {
+      "source": "/offline",
+      "destination": "/offline.html"
+    },
+    {
+      "source": "/offline/",
+      "destination": "/offline.html"
     }
   ]
 }

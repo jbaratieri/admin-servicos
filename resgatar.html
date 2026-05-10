@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Painel OS Baratieri — Resgatar licença</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Recupere seu código de licença do Painel OS Baratieri com o e-mail da compra." />
+  <style>
+    :root{--bg:#0f172a;--panel:#111827;--text:#e5e7eb;--muted:#9ca3af;--ok:#10b981;--err:#ef4444;--btn:#2563eb}
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(145deg,#0b1220,#0f172a);color:var(--text);font:16px/1.4 system-ui,Segoe UI,Roboto}
+    .wrap{min-height:100dvh;display:grid;place-items:center;padding:24px}
+    .card{width:100%;max-width:560px;background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:28px}
+    h1{margin:0 0 6px;font-size:22px} p{margin:0 0 12px;color:var(--muted)}
+    .row{display:flex;gap:8px;margin:12px 0}
+    input,button{padding:14px 16px;border-radius:10px}
+    input{flex:1;border:1px solid #374151;background:#0b1220;color:var(--text);outline:none}
+    input:focus{border-color:#475569;box-shadow:0 0 0 3px rgba(59,130,246,.25)}
+    button{border:0;background:var(--btn);color:#fff;font-weight:600;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .msg{min-height:22px;margin:6px 0;font-weight:600}
+    .ok{color:var(--ok)} .err{color:var(--err)}
+    .code{font-size:20px;font-weight:700;letter-spacing:1px;background:#0b1220;border:1px solid #1f2937;padding:12px 14px;border-radius:10px}
+    .tips{font-size:13px;color:var(--muted);margin-top:12px}
+    .footer{margin-top:14px;font-size:12px;color:#94a3b8}
+    .footer a{color:#93c5fd;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Resgatar licença</h1>
+      <p>Digite o <strong>e-mail usado na compra</strong> na Hotmart para ver seu código de acesso ao <strong>Painel OS</strong>.</p>
+
+      <div class="row">
+        <input id="email" type="email" placeholder="seuemail@exemplo.com" autocomplete="email" />
+        <button id="btn">Buscar</button>
+      </div>
+
+      <div id="msg" class="msg"></div>
+
+      <div id="result" style="display:none">
+        <p>Código de licença:</p>
+        <div class="code" id="code"></div>
+        <p class="tips">Plano: <span id="plan"></span> • Validade: <span id="exp"></span></p>
+        <div class="row" style="margin-top:12px">
+          <button id="copy">Copiar</button>
+          <button id="open">Abrir o painel</button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>Suporte: <a href="https://wa.me/5545920028659" target="_blank" rel="noopener noreferrer">WhatsApp</a> • <a href="mailto:baratieriluthieria@gmail.com">baratieriluthieria@gmail.com</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const email = $("#email"), btn = $("#btn"), msg = $("#msg");
+    const box = $("#result"), codeEl = $("#code"), planEl = $("#plan"), expEl = $("#exp");
+    const openBtn = $("#open"), copyBtn = $("#copy");
+
+    function showMsg(t, ok=false){ msg.textContent = t; msg.className = "msg " + (ok ? "ok" : "err"); }
+
+    function fmtDate(yyyy_mm_dd){
+      if (!yyyy_mm_dd) return "Vitalício / sem data";
+      const [y,m,d] = String(yyyy_mm_dd).split("-");
+      return d && m && y ? `${d}/${m}/${y}` : "—";
+    }
+
+    btn.addEventListener("click", async () => {
+      const v = (email.value || "").trim().toLowerCase();
+      if (!v) { showMsg("Digite seu e-mail."); return; }
+
+      btn.disabled = true; box.style.display = "none"; showMsg("Buscando...", true);
+
+      try{
+        const r = await fetch("/api/redeem", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ email: v })
+        });
+        const data = await r.json();
+
+        if (!data.ok){
+          const map = {
+            not_found: "Não encontramos licença para este e-mail. Verifique se usou o mesmo e-mail da compra.",
+            blocked: "Licença bloqueada. Fale com o suporte.",
+            no_code: "Licença sem código. O suporte pode ajudar.",
+            server_error: "Falha no servidor. Tente novamente.",
+            "airtable env missing": "Serviço temporariamente indisponível."
+          };
+          showMsg(map[data.msg] || "Não foi possível localizar.");
+          btn.disabled = false;
+          return;
+        }
+
+        codeEl.textContent = data.code;
+        planEl.textContent = (data.plan_type || "—");
+        expEl.textContent = fmtDate(data.expires_at);
+
+        try {
+          localStorage.setItem("os_license_key", data.code);
+          localStorage.setItem("os_license", JSON.stringify({
+            plan: data.plan_type || "mensal",
+            expires: data.expires_at || ""
+          }));
+        } catch (_) { /* ignore */ }
+
+        showMsg("Encontramos sua licença.", true);
+        box.style.display = "block";
+        btn.disabled = false;
+      }catch(e){
+        showMsg("Erro de conexão. Tente novamente.");
+        btn.disabled = false;
+      }
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      const t = codeEl.textContent || "";
+      try { await navigator.clipboard.writeText(t); showMsg("Código copiado!", true); }
+      catch(_) { showMsg("Não foi possível copiar. Copie manualmente.", false); }
+    });
+
+    openBtn.addEventListener("click", () => { location.href = "/"; });
+
+    email.addEventListener("keydown", (e)=>{ if (e.key === "Enter") btn.click(); });
+  </script>
+</body>
+</html>

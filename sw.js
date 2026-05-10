@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v12";
+const CACHE_VERSION = "v13";
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const APP_SHELL_FILES = [
   "/",
@@ -7,6 +7,9 @@ const APP_SHELL_FILES = [
   "/app.js",
   "/auth-gate.js",
   "/manifest.json",
+  "/resgatar.html",
+  "/boasvindas.html",
+  "/offline.html",
   "/assets/icon-192.png",
   "/assets/icon-512.png",
   "/assets/logotipo.png"
@@ -93,6 +96,9 @@ self.addEventListener("fetch", event => {
       } catch {
         const cachedNav = await cacheMatchBest(event.request);
         if (cachedNav) return cachedNav;
+        const offlineUrl = new URL("/offline.html", self.location.origin).href;
+        const offlinePage = await caches.match(offlineUrl);
+        if (offlinePage) return offlinePage;
         const idx = await cacheIndexFallback();
         if (idx) return idx;
         return new Response("", { status: 404, statusText: "Not in cache" });

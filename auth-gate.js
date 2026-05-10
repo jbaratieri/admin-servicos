@@ -327,6 +327,15 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("auth-gate-form")?.addEventListener("submit", onSubmit);
+    try {
+      const input = document.getElementById("auth-code");
+      const saved = localStorage.getItem(LICENSE_KEY);
+      if (input && saved && !(input.value || "").trim()) {
+        input.value = saved;
+      }
+    } catch (_) {
+      /* ignore */
+    }
     init();
   });
 
