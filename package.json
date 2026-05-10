@@ -1,5 +1,8 @@
 {
   "name": "admin-servicos",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "airtable": "^0.12.2"
+  }
 }
