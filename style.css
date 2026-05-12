@@ -679,6 +679,39 @@ a {
   margin-top: 8px;
 }
 
+.field-label-nest {
+  margin-top: 0;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #a8a29e;
+}
+
+.instr-tipo-select {
+  width: 100%;
+}
+
+.instr-grid {
+  display: grid;
+  grid-template-columns: 1fr 96px 1fr;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.instr-grid-cell {
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .instr-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .instr-ano-wrap {
+    max-width: 160px;
+  }
+}
+
 .field-label .hint {
   font-weight: 400;
   color: #a8a29e;
@@ -1513,6 +1546,29 @@ button[type="submit"] {
 .modal-field textarea {
   min-height: 64px;
   resize: vertical;
+}
+
+.modal-field.csv-export-opt {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
+.modal-field.csv-export-opt input {
+  width: auto;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.modal-field.csv-export-opt span {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.35;
 }
 
 .modal-hint {

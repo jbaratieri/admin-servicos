@@ -14,6 +14,20 @@ const flow = [
 
 const FORMAS_PAGAMENTO = ["Pix", "Dinheiro", "Cartão", "Transferência", "Outro"];
 
+/** Tipos comuns em oficina de cordas — valor gravado na OS = texto exibido. */
+const INSTR_TIPOS = [
+  "Violão 6 cordas",
+  "Violão 7+ cordas",
+  "Violão clássico / nylon",
+  "Baixo 4 cordas",
+  "Baixo 5 ou 6 cordas",
+  "Ukulele",
+  "Cavaquinho",
+  "Viola caipira",
+  "Outro cordofone",
+  "Outro"
+];
+
 const SERVICOS_PADRAO = [
   { nome: "Troca e ajuste rastilho", preco: 80 },
   { nome: "Troca de pestana (nut)", preco: 80 },
@@ -59,7 +73,7 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
-const APP_VERSION = "2.6.0";
+const APP_VERSION = "2.7.0";
 
 let storageHintUserDismissed = false;
 let storageHintHideTimer = null;
@@ -263,6 +277,57 @@ function normalizarFotosServico(s) {
   };
 }
 
+function normalizarInstrumento(s) {
+  if (!s || typeof s !== "object") return;
+  s.instrTipo = String(s.instrTipo || "").trim();
+  s.instrMarcaModelo = String(s.instrMarcaModelo || "").trim();
+  s.instrAno = String(s.instrAno || "")
+    .replace(/\D/g, "")
+    .slice(0, 4);
+  s.instrSerie = String(s.instrSerie || "").trim();
+  s.instrumento = String(s.instrumento || "").trim();
+}
+
+/** Texto único para card, busca e WhatsApp; OS antigas só com `instrumento` continuam legíveis. */
+function resumoInstrumento(s) {
+  if (!s) return "";
+  normalizarInstrumento(s);
+  const partes = [];
+  if (s.instrTipo) partes.push(s.instrTipo);
+  if (s.instrMarcaModelo) partes.push(s.instrMarcaModelo);
+  if (s.instrAno) partes.push(s.instrAno);
+  if (s.instrSerie) partes.push(`S/n ${s.instrSerie}`);
+  const nucleo = partes.join(" · ");
+  if (nucleo && s.instrumento) return `${nucleo} — ${s.instrumento}`;
+  if (nucleo) return nucleo;
+  return s.instrumento || "";
+}
+
+function popularSelectInstrumentoTipos() {
+  const sel = document.getElementById("instrTipo");
+  if (!sel || sel.dataset.osPreenchido === "1") return;
+  sel.dataset.osPreenchido = "1";
+  INSTR_TIPOS.forEach(t => {
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = t;
+    sel.appendChild(o);
+  });
+}
+
+function limparCamposInstrumentoForm() {
+  const tipo = document.getElementById("instrTipo");
+  if (tipo) tipo.value = "";
+  const mm = document.getElementById("instrMarcaModelo");
+  if (mm) mm.value = "";
+  const ano = document.getElementById("instrAno");
+  if (ano) ano.value = "";
+  const ser = document.getElementById("instrSerie");
+  if (ser) ser.value = "";
+  const liv = document.getElementById("instrumento");
+  if (liv) liv.value = "";
+}
+
 function atualizarPreviewFoto(tipo) {
   const isAntes = tipo === "antes";
   const preview = document.getElementById(isAntes ? "fotoAntesPreview" : "fotoDepoisPreview");
@@ -372,12 +437,13 @@ function syncFiltroSelectFromIndex() {
 }
 
 function matchesBusca(s) {
+  normalizarInstrumento(s);
   const q = filtroBusca.trim().toLowerCase();
   if (!q) return true;
   const parts = [
     s.id,
     s.cliente,
-    s.instrumento,
+    resumoInstrumento(s),
     s.problema,
     s.notasInternas,
     s.endereco,
@@ -479,6 +545,8 @@ function abrirModalManualPainelOS() {
           <li><strong>Fluxo:</strong> no card, use <strong>➡️</strong> para avançar a etapa. No celular, deslize para alternar a coluna em foco.</li>
           <li><strong>Busca:</strong> filtre por cliente, instrumento ou texto da OS.</li>
           <li><strong>Preços:</strong> o botão <strong>Preços</strong> edita a tabela da checklist e do orçamento.</li>
+          <li><strong>Instrumento:</strong> escolha o <strong>tipo</strong>, marca/modelo, ano e série; use <strong>Complemento</strong> para detalhes livres. OS antigas só com texto continuam no resumo do card.</li>
+          <li><strong>CSV:</strong> exporte uma <strong>planilha</strong> das OS (valores e recebimentos); opcional incluir arquivadas.</li>
           <li><strong>Backup / importar:</strong> exporte JSON com regularidade. Importar substitui os dados locais — use só se souber o que está fazendo.</li>
           <li><strong>Histórico:</strong> OS arquivadas ficam em <strong>Histórico</strong>.</li>
         </ol>
@@ -963,12 +1031,17 @@ async function duplicarOs(origId) {
   if (!s) return;
   normalizarFotosServico(s);
   const newId = uid();
+  normalizarInstrumento(s);
   const novo = {
     id: newId,
     cliente: s.cliente || "",
     telefone: s.telefone || "",
     endereco: s.endereco || "",
     instrumento: s.instrumento || "",
+    instrTipo: s.instrTipo || "",
+    instrMarcaModelo: s.instrMarcaModelo || "",
+    instrAno: s.instrAno || "",
+    instrSerie: s.instrSerie || "",
     problema: "",
     notasInternas: "",
     servicos: [],
@@ -983,6 +1056,7 @@ async function duplicarOs(origId) {
     data: new Date().toISOString(),
     arquivado: false
   };
+  normalizarInstrumento(novo);
   servicos.push(novo);
   try {
     await save();
@@ -1013,6 +1087,7 @@ async function load() {
   if (!Array.isArray(servicos)) servicos = [];
   servicos.forEach(garantirArrayPagamentos);
   servicos.forEach(normalizarFotosServico);
+  servicos.forEach(normalizarInstrumento);
   await loadClientesInMemory();
   bindClienteAutocompleteOnce();
   render();
@@ -1094,6 +1169,8 @@ function formatarStatus(status) {
 function renderCard(s, statusColuna = null) {
   garantirArrayPagamentos(s);
   normalizarFotosServico(s);
+  normalizarInstrumento(s);
+  const instLinha = resumoInstrumento(s);
 
   const base = (s.orcamento || 0)
     - (Number(s.extraValor) || 0)
@@ -1144,7 +1221,7 @@ function renderCard(s, statusColuna = null) {
       <div class="card-header">
         <div>
           <strong class="cliente">${escapeHtml(s.cliente)}</strong>
-          <span class="instrumento">${escapeHtml(s.instrumento || "")}</span>
+          <span class="instrumento" title="${escapeAttr(instLinha)}">${escapeHtml(instLinha)}</span>
         </div>
         <div class="data">${formatarData(s.data)}</div>
       </div>
@@ -1595,7 +1672,7 @@ function verArquivados() {
       <div class="card">
         <div class="card-os-id">${escapeHtml(s.id)}</div>
         <b>${escapeHtml(s.cliente)}</b><br>
-        ${escapeHtml(s.instrumento || "")}<br>
+        ${escapeHtml(resumoInstrumento(s))}<br>
         ${s.orcamento ? `<div class="valor">R$ ${escapeHtml(String(s.orcamento))}</div>` : ""}
         <small>${escapeHtml(formatarStatus(s.status))}</small>
         <div class="card-footer">
@@ -1607,6 +1684,126 @@ function verArquivados() {
     `).join("")}`;
 
   kanban.querySelector("[data-action=\"voltar\"]")?.addEventListener("click", () => render());
+}
+
+/** Célula CSV (;) com aspas se necessário — compatível com Excel em PT-BR. */
+function escapeCsvCell(raw) {
+  const s = String(raw ?? "");
+  if (/[;\r\n"]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function totalRecebidoOs(s) {
+  garantirArrayPagamentos(s);
+  return s.pagamentos.reduce((acc, p) => acc + (Number(p.valor) || 0), 0);
+}
+
+function abrirModalExportarCsv() {
+  abrirModal({
+    title: "Exportar OS (CSV)",
+    bodyHTML: `
+      <p class="modal-hint">Planilha com dados das ordens de serviço, serviços marcados e valores. Separador <strong>;</strong> (padrão Excel Brasil). Codificação UTF-8.</p>
+      <label class="modal-field csv-export-opt">
+        <input type="checkbox" id="csv-incluir-arquivadas">
+        <span>Incluir OS do histórico (arquivadas)</span>
+      </label>`,
+    footerButtons: [
+      { label: "Cancelar", onClick: () => fecharModal() },
+      {
+        label: "Baixar CSV",
+        primary: true,
+        onClick: () => {
+          const incluir = document.getElementById("csv-incluir-arquivadas")?.checked === true;
+          fecharModal();
+          baixarCsvOs(incluir);
+        }
+      }
+    ]
+  });
+}
+
+function baixarCsvOs(incluirArquivadas) {
+  const rows = servicos.filter(s => incluirArquivadas || !s.arquivado);
+  rows.sort((a, b) => {
+    const ta = new Date(a.data || 0).getTime();
+    const tb = new Date(b.data || 0).getTime();
+    return tb - ta;
+  });
+
+  const headers = [
+    "ID",
+    "Data",
+    "Status",
+    "Arquivada",
+    "Cliente",
+    "Telefone",
+    "Endereco",
+    "InstrTipo",
+    "InstrMarcaModelo",
+    "InstrAno",
+    "InstrSerie",
+    "InstrComplemento",
+    "InstrumentoResumo",
+    "Servicos",
+    "ExtraNome",
+    "ExtraValor",
+    "Desconto",
+    "Orcamento",
+    "Recebido",
+    "Saldo",
+    "PagamentoLegado",
+    "Problema",
+    "NotasInternas"
+  ];
+
+  const lines = [headers.join(";")];
+
+  for (const s of rows) {
+    garantirArrayPagamentos(s);
+    normalizarInstrumento(s);
+    const rec = totalRecebidoOs(s);
+    const orc = Number(s.orcamento) || 0;
+    const servs = Array.isArray(s.servicos) ? s.servicos.join(" | ") : "";
+    const line = [
+      s.id,
+      (s.data || "").slice(0, 10),
+      s.status || "entrada",
+      s.arquivado ? "sim" : "nao",
+      s.cliente,
+      s.telefone,
+      s.endereco,
+      s.instrTipo || "",
+      s.instrMarcaModelo || "",
+      s.instrAno || "",
+      s.instrSerie || "",
+      s.instrumento || "",
+      resumoInstrumento(s),
+      servs,
+      s.extraNome || "",
+      String(Number(s.extraValor) || 0),
+      String(Number(s.desconto) || 0),
+      String(orc),
+      String(rec),
+      String(Math.round((orc - rec) * 100) / 100),
+      s.pagamento || "pendente",
+      s.problema || "",
+      s.notasInternas || ""
+    ].map(escapeCsvCell);
+    lines.push(line.join(";"));
+  }
+
+  const bom = "\uFEFF";
+  const csv = bom + lines.join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  a.href = URL.createObjectURL(blob);
+  a.download = `painel-os-relatorio-${stamp}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast(rows.length ? `${rows.length} OS no CSV` : "CSV só com cabeçalho (nenhuma OS)");
 }
 
 function exportarBackup() {
@@ -1664,6 +1861,7 @@ function onImportFileChange(e) {
               if (pacote) {
                 servicos = data.servicos;
                 servicos.forEach(garantirArrayPagamentos);
+                servicos.forEach(normalizarInstrumento);
                 if (temCatalogo) {
                   catalogoAtual = normalizarCatalogo(data.catalogo);
                   await saveCatalogo();
@@ -1677,6 +1875,7 @@ function onImportFileChange(e) {
               } else {
                 servicos = data;
                 servicos.forEach(garantirArrayPagamentos);
+                servicos.forEach(normalizarInstrumento);
                 clientes = buildClientesFromServicos(servicos);
                 await saveClientes();
               }
@@ -1704,11 +1903,27 @@ function editar(id) {
   const s = servicos.find(x => x.id === id);
   if (!s) return;
   normalizarFotosServico(s);
+  normalizarInstrumento(s);
 
   document.getElementById("form-title").textContent = "Editar ordem de serviço";
   document.getElementById("cliente").value = s.cliente || "";
   document.getElementById("telefone").value = s.telefone || "";
   document.getElementById("endereco").value = s.endereco || "";
+  const tipoEl = document.getElementById("instrTipo");
+  const tipoVal = s.instrTipo || "";
+  if (tipoEl) {
+    tipoEl.value = tipoVal;
+    if (tipoVal && tipoEl.value !== tipoVal) {
+      const o = document.createElement("option");
+      o.value = tipoVal;
+      o.textContent = tipoVal;
+      tipoEl.appendChild(o);
+      tipoEl.value = tipoVal;
+    }
+  }
+  document.getElementById("instrMarcaModelo").value = s.instrMarcaModelo || "";
+  document.getElementById("instrAno").value = s.instrAno || "";
+  document.getElementById("instrSerie").value = s.instrSerie || "";
   document.getElementById("instrumento").value = s.instrumento || "";
   document.getElementById("problema").value = s.problema || "";
   document.getElementById("notasInternas").value = s.notasInternas || "";
@@ -1748,7 +1963,11 @@ document.getElementById("form").addEventListener("submit", async e => {
     cliente: document.getElementById("cliente").value,
     telefone: document.getElementById("telefone").value,
     endereco: document.getElementById("endereco").value.trim(),
-    instrumento: document.getElementById("instrumento").value,
+    instrTipo: (document.getElementById("instrTipo")?.value || "").trim(),
+    instrMarcaModelo: (document.getElementById("instrMarcaModelo")?.value || "").trim(),
+    instrAno: (document.getElementById("instrAno")?.value || "").replace(/\D/g, "").slice(0, 4),
+    instrSerie: (document.getElementById("instrSerie")?.value || "").trim(),
+    instrumento: document.getElementById("instrumento").value.trim(),
     problema: document.getElementById("problema").value,
     notasInternas: document.getElementById("notasInternas").value.trim(),
     servicos: servicosSelecionados,
@@ -1837,6 +2056,8 @@ async function iniciarPainel() {
   if (window.__osPainelIniciado) return;
   window.__osPainelIniciado = true;
 
+  popularSelectInstrumentoTipos();
+
   document.getElementById("modal-body").addEventListener("click", onCatalogRowRemoveClick);
 
   await loadCatalogoInMemory();
@@ -1870,6 +2091,7 @@ async function iniciarPainel() {
   });
 
   document.getElementById("btn-backup").addEventListener("click", exportarBackup);
+  document.getElementById("btn-export-csv")?.addEventListener("click", abrirModalExportarCsv);
   document.getElementById("btn-catalogo")?.addEventListener("click", abrirEditorCatalogo);
   document.getElementById("btn-import")?.addEventListener("click", () => {
     document.getElementById("import-file").click();

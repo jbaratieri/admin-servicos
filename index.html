@@ -90,8 +90,26 @@
       <input id="telefone" placeholder="WhatsApp / telefone" inputmode="tel" autocomplete="tel">
       <input id="endereco" placeholder="Endereço (opcional)" autocomplete="street-address">
 
-      <label class="field-label">Instrumento</label>
-      <input id="instrumento" placeholder="Ex.: Strato Fender MIM 2018">
+      <label class="field-label" for="instrTipo">Instrumento</label>
+      <select id="instrTipo" class="instr-tipo-select" aria-label="Tipo de instrumento">
+        <option value="">Tipo (opcional)</option>
+      </select>
+      <div class="instr-grid">
+        <div class="instr-grid-cell">
+          <label class="field-label field-label-nest" for="instrMarcaModelo">Marca / modelo</label>
+          <input id="instrMarcaModelo" placeholder="Ex.: Fender, Giannini…" autocomplete="off">
+        </div>
+        <div class="instr-grid-cell instr-ano-wrap">
+          <label class="field-label field-label-nest" for="instrAno">Ano</label>
+          <input id="instrAno" placeholder="2018" inputmode="numeric" maxlength="4" autocomplete="off">
+        </div>
+        <div class="instr-grid-cell">
+          <label class="field-label field-label-nest" for="instrSerie">Nº série</label>
+          <input id="instrSerie" placeholder="Opcional" autocomplete="off">
+        </div>
+      </div>
+      <label class="field-label" for="instrumento">Complemento <span class="hint">(opcional)</span></label>
+      <input id="instrumento" placeholder="Cor, escala, captadores, observações…" autocomplete="off">
 
       <label class="field-label">Fotos da OS <span class="hint">(opcional)</span></label>
       <div class="photo-fields">
@@ -183,6 +201,7 @@
         </select>
         <button type="button" class="btn-toolbar" id="btn-historico" onclick="verArquivados()">Histórico</button>
         <button type="button" class="btn-toolbar btn-toolbar-secondary" id="btn-catalogo">Preços</button>
+        <button type="button" class="btn-toolbar btn-toolbar-secondary" id="btn-export-csv">CSV</button>
         <button type="button" class="btn-toolbar btn-toolbar-secondary" id="btn-backup">Backup JSON</button>
         <button type="button" class="btn-toolbar btn-toolbar-secondary" id="btn-import">Importar JSON</button>
       </div>
