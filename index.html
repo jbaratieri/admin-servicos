@@ -79,8 +79,12 @@
     </div>
 
     <form id="form" class="form-app">
-      <label class="field-label">Cliente</label>
-      <input id="cliente" placeholder="Nome completo" required autocomplete="name">
+      <label class="field-label" for="cliente">Cliente</label>
+      <div class="field-autocomplete-wrap">
+        <input id="cliente" placeholder="Nome completo" required autocomplete="off" spellcheck="false"
+          aria-controls="cliente-suggestions" aria-autocomplete="list" aria-expanded="false">
+        <div id="cliente-suggestions" class="cliente-suggestions" role="listbox" hidden aria-label="Clientes salvos"></div>
+      </div>
 
       <label class="field-label">Contato &amp; endereço</label>
       <input id="telefone" placeholder="WhatsApp / telefone" inputmode="tel" autocomplete="tel">

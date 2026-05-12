@@ -48,6 +48,7 @@ const IDB_NAME = "luthier-os-local-v1";
 const IDB_STORE = "kv";
 const IDB_KEY_SERVICOS = "servicos";
 const IDB_KEY_CATALOGO = "catalogo";
+const IDB_KEY_CLIENTES = "clientes";
 const LS_FALLBACK = "luthier-os-servicos-v1";
 const LS_CATALOGO_KEY = "luthier-catalogo-local-v1";
 const LS_LAST_BACKUP_EXPORT_AT = "luthier-last-backup-export-at-v1";
@@ -58,7 +59,7 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
-const APP_VERSION = "2.5.2";
+const APP_VERSION = "2.6.0";
 
 let storageHintUserDismissed = false;
 let storageHintHideTimer = null;
@@ -226,6 +227,8 @@ function atualizarIndicadorArmazenamento() {
 
 let editingId = null;
 let servicos = [];
+/** Cadastro local reutilizável (nome + telefone + endereço), alimentado pelas OS. */
+let clientes = [];
 let currentStatusIndex = 0;
 let valorManual = false;
 let filtroBusca = "";
@@ -348,6 +351,7 @@ function abrirForm() {
 }
 
 function fecharForm() {
+  hideClienteSuggestions();
   formContainer.classList.remove("is-open");
   formContainer.setAttribute("aria-hidden", "true");
 }
@@ -455,7 +459,7 @@ function abrirModalSobrePainelOS() {
     bodyHTML: `
       <div class="modal-prose">
         <p>O <strong>Painel OS Baratieri</strong> organiza <strong>ordens de serviço</strong> em colunas, do recebimento do instrumento até a entrega.</p>
-        <p>Os registros ficam <strong>só neste aparelho</strong> (navegador). Use <strong>Backup JSON</strong> com frequência para não perder o histórico.</p>
+        <p>Os registros ficam <strong>só neste aparelho</strong> (navegador). Use <strong>Backup JSON</strong> com frequência para não perder o histórico de OS, <strong>clientes salvos</strong> e tabela de preços.</p>
         <p>Complemento ao ecossistema <strong>Método Baratieri</strong> / Luthieria Baratieri.</p>
       </div>`,
     footerButtons: modalApenasFechar()
@@ -470,6 +474,8 @@ function abrirModalManualPainelOS() {
         <ol class="modal-help-steps">
           <li><strong>Acesso:</strong> informe o código recebido. Se perdeu, use <strong>Contato</strong> no rodapé (também na tela de login).</li>
           <li><strong>Nova OS:</strong> <strong>＋ Nova OS</strong>, preencha os dados e salve. O card aparece em <em>Entrada</em>.</li>
+          <li><strong>Cliente:</strong> ao digitar o nome, aparecem <strong>sugestões</strong> de quem já passou pela oficina; toque para preencher telefone e endereço.</li>
+          <li><strong>Duplicar OS:</strong> no card, use <strong>📋</strong> para criar uma nova OS na Entrada com o mesmo cliente (e instrumento); ajuste o serviço e salve.</li>
           <li><strong>Fluxo:</strong> no card, use <strong>➡️</strong> para avançar a etapa. No celular, deslize para alternar a coluna em foco.</li>
           <li><strong>Busca:</strong> filtre por cliente, instrumento ou texto da OS.</li>
           <li><strong>Preços:</strong> o botão <strong>Preços</strong> edita a tabela da checklist e do orçamento.</li>
@@ -769,6 +775,229 @@ function garantirArrayPagamentos(s) {
   }
 }
 
+function chaveCliente(nome, telefone) {
+  const n = String(nome || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  const d = String(telefone || "").replace(/\D/g, "");
+  return `${n}::${d}`;
+}
+
+function normalizarClienteRegistro(c) {
+  return {
+    id: String(c?.id || "").trim() || `cli-${Date.now()}`,
+    nome: String(c?.nome || "").trim(),
+    telefone: String(c?.telefone || "").trim(),
+    endereco: String(c?.endereco || "").trim(),
+    atualizadoEm: c?.atualizadoEm || new Date().toISOString()
+  };
+}
+
+function buildClientesFromServicos(lista) {
+  const byKey = new Map();
+  for (const s of lista) {
+    const nome = String(s?.cliente || "").trim();
+    if (!nome) continue;
+    const telefone = String(s?.telefone || "").trim();
+    const endereco = String(s?.endereco || "").trim();
+    const k = chaveCliente(nome, telefone);
+    const prev = byKey.get(k);
+    if (prev) {
+      if (endereco && !prev.endereco) prev.endereco = endereco;
+      continue;
+    }
+    byKey.set(k, {
+      id: `cli-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      nome,
+      telefone,
+      endereco,
+      atualizadoEm: new Date().toISOString()
+    });
+  }
+  return Array.from(byKey.values()).sort((a, b) =>
+    a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
+  );
+}
+
+async function saveClientes() {
+  try {
+    await idbPut(IDB_KEY_CLIENTES, clientes);
+  } catch (e) {
+    console.warn("Gravar clientes:", e);
+  }
+}
+
+async function loadClientesInMemory() {
+  try {
+    const raw = await idbGet(IDB_KEY_CLIENTES);
+    if (Array.isArray(raw) && raw.length) {
+      clientes = raw.map(normalizarClienteRegistro).filter(c => c.nome);
+      return;
+    }
+  } catch {
+    /* ignore */
+  }
+  clientes = buildClientesFromServicos(servicos);
+  if (clientes.length) await saveClientes();
+}
+
+function indiceClientePorChave(nome, telefone) {
+  const k = chaveCliente(nome, telefone);
+  return clientes.findIndex(c => chaveCliente(c.nome, c.telefone) === k);
+}
+
+async function upsertClienteFromOsForm(nomeRaw, telefoneRaw, enderecoRaw) {
+  const nome = String(nomeRaw || "").trim();
+  if (!nome) return;
+  const telefone = String(telefoneRaw || "").trim();
+  const endereco = String(enderecoRaw || "").trim();
+  const ix = indiceClientePorChave(nome, telefone);
+  const agora = new Date().toISOString();
+  if (ix >= 0) {
+    clientes[ix] = {
+      ...clientes[ix],
+      nome,
+      telefone,
+      endereco: endereco || clientes[ix].endereco,
+      atualizadoEm: agora
+    };
+  } else {
+    clientes.push({
+      id: `cli-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      nome,
+      telefone,
+      endereco,
+      atualizadoEm: agora
+    });
+  }
+  clientes.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }));
+  await saveClientes();
+}
+
+function filtrarSugestoesClientes(query) {
+  const q = String(query || "")
+    .trim()
+    .toLowerCase();
+  const digitos = q.replace(/\D/g, "");
+  let list = clientes;
+  if (q) {
+    list = clientes.filter(c => {
+      const nomeOk = c.nome.toLowerCase().includes(q);
+      const tel = String(c.telefone || "").replace(/\D/g, "");
+      const telOk = digitos.length >= 3 && tel.includes(digitos);
+      return nomeOk || telOk;
+    });
+  }
+  return list.slice(0, 8);
+}
+
+function hideClienteSuggestions() {
+  const box = document.getElementById("cliente-suggestions");
+  const inp = document.getElementById("cliente");
+  if (box) {
+    box.hidden = true;
+    box.innerHTML = "";
+  }
+  inp?.setAttribute("aria-expanded", "false");
+}
+
+function aplicarClienteSugerido(c) {
+  document.getElementById("cliente").value = c.nome;
+  document.getElementById("telefone").value = c.telefone || "";
+  document.getElementById("endereco").value = c.endereco || "";
+  hideClienteSuggestions();
+}
+
+function renderClienteSuggestions() {
+  const box = document.getElementById("cliente-suggestions");
+  const inp = document.getElementById("cliente");
+  if (!box || !inp || !formContainer?.classList.contains("is-open")) return;
+
+  const list = filtrarSugestoesClientes(inp.value);
+  if (!list.length) {
+    hideClienteSuggestions();
+    return;
+  }
+
+  box.innerHTML = list
+    .map(
+      (c, i) => `
+    <button type="button" class="cliente-suggestion-item" role="option" data-ci="${i}">
+      <span class="cj-nome">${escapeHtml(c.nome)}</span>
+      <span class="cj-meta">${escapeHtml(c.telefone || "sem telefone")}</span>
+    </button>`
+    )
+    .join("");
+
+  box.hidden = false;
+  inp.setAttribute("aria-expanded", "true");
+
+  box.querySelectorAll(".cliente-suggestion-item").forEach(btn => {
+    btn.addEventListener("mousedown", e => {
+      e.preventDefault();
+      const i = Number(btn.dataset.ci);
+      if (Number.isFinite(i) && list[i]) aplicarClienteSugerido(list[i]);
+    });
+  });
+}
+
+function bindClienteAutocompleteOnce() {
+  if (window.__osClienteAcBound) return;
+  window.__osClienteAcBound = true;
+
+  const inp = document.getElementById("cliente");
+  if (!inp) return;
+
+  inp.addEventListener("input", () => renderClienteSuggestions());
+  inp.addEventListener("focus", () => renderClienteSuggestions());
+
+  document.addEventListener("click", e => {
+    const wrap = document.querySelector(".field-autocomplete-wrap");
+    if (wrap && !wrap.contains(e.target)) hideClienteSuggestions();
+  });
+}
+
+async function duplicarOs(origId) {
+  const s = servicos.find(x => x.id === origId);
+  if (!s) return;
+  normalizarFotosServico(s);
+  const newId = uid();
+  const novo = {
+    id: newId,
+    cliente: s.cliente || "",
+    telefone: s.telefone || "",
+    endereco: s.endereco || "",
+    instrumento: s.instrumento || "",
+    problema: "",
+    notasInternas: "",
+    servicos: [],
+    extraNome: "",
+    extraValor: 0,
+    desconto: 0,
+    orcamento: 0,
+    pagamento: "pendente",
+    fotos: { antes: "", depois: "" },
+    status: "entrada",
+    pagamentos: [],
+    data: new Date().toISOString(),
+    arquivado: false
+  };
+  servicos.push(novo);
+  try {
+    await save();
+    await upsertClienteFromOsForm(novo.cliente, novo.telefone, novo.endereco);
+    showToast("OS duplicada na Entrada — ajuste e salve");
+    currentStatusIndex = 0;
+    syncFiltroSelectFromIndex();
+    render();
+    editar(newId);
+  } catch (err) {
+    servicos.pop();
+    showToast("Erro ao duplicar OS");
+  }
+}
+
 async function load() {
   try {
     let rows = await idbGet(IDB_KEY_SERVICOS);
@@ -784,6 +1013,8 @@ async function load() {
   if (!Array.isArray(servicos)) servicos = [];
   servicos.forEach(garantirArrayPagamentos);
   servicos.forEach(normalizarFotosServico);
+  await loadClientesInMemory();
+  bindClienteAutocompleteOnce();
   render();
   atualizarIndicadorArmazenamento();
   agendarLembreteBackupAposCarregar();
@@ -957,6 +1188,7 @@ function renderCard(s, statusColuna = null) {
         <div class="card-actions">
           <button type="button" class="card-action" data-action="wa" data-id="${idAttr}" title="WhatsApp">📲</button>
           <button type="button" class="card-action" data-action="edit" data-id="${idAttr}" title="Editar OS">✏️</button>
+          <button type="button" class="card-action" data-action="duplicate" data-id="${idAttr}" title="Duplicar OS (mesmo cliente)">📋</button>
           <button type="button" class="card-action" data-action="next" data-id="${idAttr}" title="Próxima etapa">➡️</button>
           ${(s.status || "entrada") === "entregue"
       ? `<button type="button" class="card-action" data-action="archive" data-id="${idAttr}" title="Arquivar OS">📦</button>`
@@ -1036,6 +1268,9 @@ function onKanbanClick(e) {
       break;
     case "edit":
       editar(id);
+      break;
+    case "duplicate":
+      duplicarOs(id);
       break;
     case "next":
       avancarStatus(id);
@@ -1379,7 +1614,8 @@ function exportarBackup() {
     v: 1,
     exportedAt: new Date().toISOString(),
     servicos,
-    catalogo: catalogoAtual
+    catalogo: catalogoAtual,
+    clientes
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
   const a = document.createElement("a");
@@ -1389,7 +1625,7 @@ function exportarBackup() {
   a.click();
   URL.revokeObjectURL(a.href);
   marcarBackupExportado();
-  showToast("Backup baixado (OS + tabela de preços)");
+  showToast("Backup baixado (OS + clientes + tabela de preços)");
 }
 
 function onImportFileChange(e) {
@@ -1410,12 +1646,14 @@ function onImportFileChange(e) {
 
       const nOs = pacote ? data.servicos.length : data.length;
       const temCatalogo = pacote && Array.isArray(data.catalogo) && data.catalogo.length;
+      const temClientes = pacote && Array.isArray(data.clientes) && data.clientes.length;
 
       abrirModal({
         title: "Restaurar backup",
         bodyHTML: `
           <p>O arquivo contém <strong>${nOs}</strong> ordem(ns) de serviço.</p>
           ${temCatalogo ? "<p>Também há uma <strong>tabela de preços</strong> no arquivo.</p>" : ""}
+          ${temClientes ? "<p>Também há <strong>clientes salvos</strong> para sugestão no formulário.</p>" : ""}
           <p class="modal-hint">Isso <strong>substitui</strong> os dados neste aparelho. Faça um backup atual antes, se precisar.</p>`,
         footerButtons: [
           { label: "Cancelar", onClick: () => fecharModal() },
@@ -1430,9 +1668,17 @@ function onImportFileChange(e) {
                   catalogoAtual = normalizarCatalogo(data.catalogo);
                   await saveCatalogo();
                 }
+                if (Array.isArray(data.clientes) && data.clientes.length) {
+                  clientes = data.clientes.map(normalizarClienteRegistro).filter(c => c.nome);
+                } else {
+                  clientes = buildClientesFromServicos(servicos);
+                }
+                await saveClientes();
               } else {
                 servicos = data;
                 servicos.forEach(garantirArrayPagamentos);
+                clientes = buildClientesFromServicos(servicos);
+                await saveClientes();
               }
               fecharModal();
               render();
@@ -1538,6 +1784,7 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   try {
     await save();
+    await upsertClienteFromOsForm(payloadBase.cliente, payloadBase.telefone, payloadBase.endereco);
     render();
     showToast("OS salva");
   } catch (err) {
@@ -1598,6 +1845,7 @@ async function iniciarPainel() {
   document.getElementById("kanban").addEventListener("click", onKanbanClick);
 
   document.getElementById("fab").onclick = () => {
+    hideClienteSuggestions();
     editingId = null;
     valorManual = false;
     document.getElementById("form").reset();
@@ -1691,7 +1939,7 @@ async function iniciarPainel() {
     setTimeout(() => tentarToastLembreteBackup(), 600);
   });
 
-  load();
+  await load();
 }
 
 document.addEventListener("os-app-unlock", () => {
