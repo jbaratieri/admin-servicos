@@ -1006,23 +1006,13 @@ a {
   accent-color: #ea580c;
 }
 
-.mat-bloco {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
-}
-
 .mat-linhas {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 13px;
   color: #44403c;
-}
-
-.mat-linha-card {
-  padding: 4px 0;
 }
 
 .mat-nao-soma {
@@ -1293,6 +1283,49 @@ button[type="submit"] {
   padding: 0 10px 10px;
   color: #44403c;
   white-space: pre-wrap;
+}
+
+.card-notas--plain {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.card-notas--plain summary {
+  color: #44403c;
+}
+
+.card-notas--plain .notas-body {
+  white-space: normal;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-linha-detalhe {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 2px 0;
+  font-size: 13px;
+  color: #44403c;
+}
+
+.card-linha-valor {
+  font-weight: 600;
+  color: #292524;
+  flex-shrink: 0;
+}
+
+.card-linha-extra {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+.card-linha-extra-tit {
+  font-weight: 700;
+  color: #c2410c;
 }
 
 .card-servicos {

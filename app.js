@@ -73,7 +73,7 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
-const APP_VERSION = "2.8.0";
+const APP_VERSION = "2.8.1";
 
 let storageHintUserDismissed = false;
 let storageHintHideTimer = null;
@@ -1298,6 +1298,13 @@ function formatarStatus(status) {
   return String(status || "").replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
 }
 
+function precoServicoCatalogo(nome) {
+  const item = catalogoAtual.find(x => x.nome === nome);
+  if (!item) return null;
+  const n = Number(item.preco);
+  return Number.isFinite(n) ? n : null;
+}
+
 function renderCard(s, statusColuna = null) {
   garantirArrayPagamentos(s);
   normalizarFotosServico(s);
@@ -1330,21 +1337,52 @@ function renderCard(s, statusColuna = null) {
       if (m.valorUnit) bits.push(`R$ ${m.valorUnit}/un`);
       if (sub > 0) bits.push(`= R$ ${sub}`);
       const tail = bits.length ? ` — ${bits.join(" · ")}` : "";
-      return `<div class="mat-linha-card">${escapeHtml(`${label}${tail}`)}</div>`;
+      return `<div class="card-linha-detalhe">${escapeHtml(`${label}${tail}`)}</div>`;
     })
     .join("");
-  const matBlocoHtml = temMatLista
-    ? `
-          <div class="mat-bloco">
-            <div class="servico-header">
-              <span>Material</span>
-              ${matSub > 0 ? `<span class="servico-valor">R$ ${escapeHtml(String(matSub))}</span>` : ""}
-            </div>
-            ${s.materialSomarOrcamento === false ? `<p class="mat-nao-soma">Só registro — não entra no total.</p>` : ""}
-            <div class="mat-linhas">
-              ${matLinhasHtml}
-            </div>
-          </div>`
+
+  const temServicosOuExtra = (s.servicos?.length > 0) || !!String(s.extraNome || "").trim();
+  const extraVal = Number(s.extraValor) || 0;
+  const parcelaTabelaEExtra = (Number(base) || 0) + extraVal;
+  let sumarioServicos = "Serviços e extra";
+  if (parcelaTabelaEExtra > 0) {
+    sumarioServicos += ` — R$ ${parcelaTabelaEExtra}`;
+  }
+  const servicosLinhasHtml = (s.servicos || [])
+    .map(serv => {
+      const p = precoServicoCatalogo(serv);
+      if (p != null) {
+        return `<div class="card-linha-detalhe">${escapeHtml(serv)} <span class="card-linha-valor">R$ ${escapeHtml(String(p))}</span></div>`;
+      }
+      return `<div class="card-linha-detalhe">${escapeHtml(serv)}</div>`;
+    })
+    .join("");
+  const extraLinhaHtml = String(s.extraNome || "").trim()
+    ? `<div class="card-linha-detalhe card-linha-extra"><span class="card-linha-extra-tit">Extra</span> · ${escapeHtml(s.extraNome)}${extraVal ? ` <span class="card-linha-valor">R$ ${escapeHtml(String(extraVal))}</span>` : ""}</div>`
+    : "";
+
+  const detServicosExtraHtml = temServicosOuExtra
+    ? `<details class="card-notas card-notas--plain">
+        <summary>${escapeHtml(sumarioServicos)}</summary>
+        <div class="notas-body">
+          ${servicosLinhasHtml}
+          ${extraLinhaHtml}
+        </div>
+      </details>`
+    : "";
+
+  let sumarioMaterial = "Material";
+  if (matSub > 0) sumarioMaterial += ` — R$ ${matSub}`;
+  if (s.materialSomarOrcamento === false) sumarioMaterial += " (só registro)";
+
+  const detMaterialHtml = temMatLista
+    ? `<details class="card-notas card-notas--plain">
+        <summary>${escapeHtml(sumarioMaterial)}</summary>
+        <div class="notas-body">
+          ${s.materialSomarOrcamento === false ? `<p class="mat-nao-soma">Não entra no total desta OS.</p>` : ""}
+          <div class="mat-linhas">${matLinhasHtml}</div>
+        </div>
+      </details>`
     : "";
 
   const idAttr = escapeAttr(s.id);
@@ -1391,27 +1429,10 @@ function renderCard(s, statusColuna = null) {
       </div>
       ${fotosHtml}
       ${notasBlock}
-      ${(s.servicos?.length || s.extraNome || temMatLista) ? `
+      ${(temServicosOuExtra || temMatLista) ? `
         <div class="card-servicos">
-          ${s.servicos?.length ? `
-            <div class="servico-bloco">
-              <div class="servico-header">
-                <span>Serviços</span>
-                ${base ? `<span class="servico-valor">R$ ${escapeHtml(String(base))}</span>` : ""}
-              </div>
-              <div class="servico-tags">
-                ${s.servicos.map(serv => `<span class="tag-servico">${escapeHtml(serv)}</span>`).join("")}
-              </div>
-            </div>` : ""}
-          ${s.extraNome ? `
-            <div class="extra-bloco">
-              <div class="servico-header">
-                <span>Extra</span>
-                ${s.extraValor ? `<span class="servico-valor">R$ ${escapeHtml(String(s.extraValor))}</span>` : ""}
-              </div>
-              <span class="tag-servico tag-extra">${escapeHtml(s.extraNome)}</span>
-            </div>` : ""}
-          ${matBlocoHtml}
+          ${detServicosExtraHtml}
+          ${detMaterialHtml}
         </div>` : ""}
       ${mostrarFinanceiro ? `
         <div class="financeiro">
