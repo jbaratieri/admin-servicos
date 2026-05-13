@@ -895,6 +895,142 @@ a {
   border-radius: 6px;
 }
 
+/* ——— Material / peças (formulário OS) ——— */
+.materiais-wrap {
+  margin-bottom: 12px;
+}
+
+.mat-head {
+  display: grid;
+  grid-template-columns: 1fr 3.5rem 5.25rem 2rem;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px 10px 16px;
+  background: linear-gradient(180deg, #44403c 0%, #292524 100%);
+  color: #fafaf9;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mat-head span:nth-child(3) {
+  text-align: right;
+}
+
+.materiais-body {
+  max-height: min(40vh, 280px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.materiais-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.materiais-body::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 6px;
+}
+
+.mat-row {
+  display: grid;
+  grid-template-columns: 1fr 3.5rem 5.25rem 2rem;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.mat-row:last-child {
+  border-bottom: none;
+}
+
+.mat-row .mat-desc {
+  min-width: 0;
+}
+
+.mat-row .mat-qtd,
+.mat-row .mat-unit {
+  width: 100%;
+}
+
+.btn-mat-remove {
+  border: 1px solid var(--border);
+  background: #fafaf9;
+  border-radius: 8px;
+  padding: 6px 0;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: #57534e;
+}
+
+.btn-mat-remove:active {
+  background: #e7e5e4;
+}
+
+.mat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--border);
+  background: #fafaf9;
+}
+
+.btn-mat-add {
+  border: 1px solid #ea580c;
+  background: #fff7ed;
+  color: #9a3412;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mat-somar-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #44403c;
+  cursor: pointer;
+}
+
+.mat-somar-label input {
+  width: auto;
+  accent-color: #ea580c;
+}
+
+.mat-bloco {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.mat-linhas {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #44403c;
+}
+
+.mat-linha-card {
+  padding: 4px 0;
+}
+
+.mat-nao-soma {
+  font-size: 12px;
+  color: #78716c;
+  margin: 4px 0 0;
+}
+
 .check-item {
   display: grid;
   grid-template-columns: 1fr minmax(4.5rem, auto);

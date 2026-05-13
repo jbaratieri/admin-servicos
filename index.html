@@ -150,6 +150,24 @@
       <label class="field-label">Serviços da tabela</label>
       <div id="checklist-servicos" class="checklist-servicos"></div>
 
+      <label class="field-label">Material / peças <span class="hint">(opcional; linhas com descrição ou valores)</span></label>
+      <div id="materiais-wrap" class="materiais-wrap checklist-table">
+        <div class="mat-head" aria-hidden="true">
+          <span>Item</span>
+          <span>Qtd</span>
+          <span>R$ unit.</span>
+          <span></span>
+        </div>
+        <div id="materiais-body" class="materiais-body"></div>
+        <div class="mat-toolbar">
+          <button type="button" class="btn-mat-add" id="btn-mat-add">＋ Linha</button>
+          <label class="mat-somar-label">
+            <input type="checkbox" id="material-somar-orcamento" checked>
+            Somar material no total
+          </label>
+        </div>
+      </div>
+
       <label class="field-label">Orçamento total (R$)</label>
       <input id="orcamento" placeholder="Calculado pela checklist" type="number" min="0" step="0.01">
 
@@ -220,7 +238,7 @@
 
     <ul class="site-footer-help" aria-label="Ajuda no aplicativo">
       <li><button type="button" class="site-footer-help-btn" id="footer-help-contato">Contato</button></li>
-      <li><button type="button" class="site-footer-help-btn" id="footer-help-sobre">Sobre o Painel OS Baratieri</button></li>
+      <li><button type="button" class="site-footer-help-btn" id="footer-help-sobre">Sobre o Painel OS</button></li>
       <li><button type="button" class="site-footer-help-btn" id="footer-help-manual">Manual de uso</button></li>
     </ul>
 

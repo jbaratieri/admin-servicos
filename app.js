@@ -73,7 +73,7 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
-const APP_VERSION = "2.7.0";
+const APP_VERSION = "2.8.0";
 
 let storageHintUserDismissed = false;
 let storageHintHideTimer = null;
@@ -288,6 +288,41 @@ function normalizarInstrumento(s) {
   s.instrumento = String(s.instrumento || "").trim();
 }
 
+function normalizarMateriais(s) {
+  if (!s || typeof s !== "object") return;
+  if (!Array.isArray(s.materiais)) {
+    s.materiais = [];
+    return;
+  }
+  s.materiais = s.materiais.map(m => ({
+    desc: String(m?.desc ?? "").trim(),
+    qtd: Math.max(0, Number(m?.qtd) || 0),
+    valorUnit: Math.max(0, Number(m?.valorUnit) || 0)
+  }));
+}
+
+function subtotalMateriaisOs(s) {
+  normalizarMateriais(s);
+  return Math.round(s.materiais.reduce((acc, m) => acc + m.qtd * m.valorUnit, 0) * 100) / 100;
+}
+
+function textoMateriaisBusca(s) {
+  normalizarMateriais(s);
+  return s.materiais.map(m => m.desc).filter(Boolean).join(" ");
+}
+
+function resumoMateriaisCsv(s) {
+  normalizarMateriais(s);
+  return s.materiais
+    .filter(m => m.desc || m.qtd * m.valorUnit > 0)
+    .map(m => {
+      const sub = Math.round(m.qtd * m.valorUnit * 100) / 100;
+      const d = m.desc || "?";
+      return `${d} (${m.qtd}×${m.valorUnit}=${sub})`;
+    })
+    .join(" | ");
+}
+
 /** Texto único para card, busca e WhatsApp; OS antigas só com `instrumento` continuam legíveis. */
 function resumoInstrumento(s) {
   if (!s) return "";
@@ -440,6 +475,7 @@ function matchesBusca(s) {
   normalizarInstrumento(s);
   const q = filtroBusca.trim().toLowerCase();
   if (!q) return true;
+  normalizarMateriais(s);
   const parts = [
     s.id,
     s.cliente,
@@ -448,6 +484,7 @@ function matchesBusca(s) {
     s.notasInternas,
     s.endereco,
     s.telefone,
+    textoMateriaisBusca(s),
     ...(Array.isArray(s.servicos) ? s.servicos : [])
   ].filter(Boolean).join(" ").toLowerCase();
   return parts.includes(q);
@@ -545,6 +582,7 @@ function abrirModalManualPainelOS() {
           <li><strong>Fluxo:</strong> no card, use <strong>➡️</strong> para avançar a etapa. No celular, deslize para alternar a coluna em foco.</li>
           <li><strong>Busca:</strong> filtre por cliente, instrumento ou texto da OS.</li>
           <li><strong>Preços:</strong> o botão <strong>Preços</strong> edita a tabela da checklist e do orçamento.</li>
+          <li><strong>Material:</strong> linhas com item, quantidade e valor unitário; marque <strong>Somar material no total</strong> para entrar no orçamento automático (desmarque só para anotar peças sem alterar o total).</li>
           <li><strong>Instrumento:</strong> escolha o <strong>tipo</strong>, marca/modelo, ano e série; use <strong>Complemento</strong> para detalhes livres. OS antigas só com texto continuam no resumo do card.</li>
           <li><strong>CSV:</strong> exporte uma <strong>planilha</strong> das OS (valores e recebimentos); opcional incluir arquivadas.</li>
           <li><strong>Backup / importar:</strong> exporte JSON com regularidade. Importar substitui os dados locais — use só se souber o que está fazendo.</li>
@@ -790,6 +828,95 @@ function renderChecklist() {
   });
 }
 
+function htmlMateriaisRow(m = {}) {
+  const desc = escapeAttr(m.desc || "");
+  const qtd =
+    m.qtd != null && m.qtd !== ""
+      ? escapeAttr(String(m.qtd))
+      : "";
+  const vu =
+    m.valorUnit != null && m.valorUnit !== ""
+      ? escapeAttr(String(m.valorUnit))
+      : "";
+  return `
+    <div class="mat-row">
+      <input type="text" class="mat-desc" placeholder="Ex.: cordas" maxlength="120" value="${desc}">
+      <input type="number" class="mat-qtd" placeholder="Qtd" min="0" step="any" value="${qtd}">
+      <input type="number" class="mat-unit" placeholder="Unit." min="0" step="0.01" value="${vu}">
+      <button type="button" class="btn-mat-remove" title="Remover linha">×</button>
+    </div>`;
+}
+
+function renderMateriaisForm(lista) {
+  const body = document.getElementById("materiais-body");
+  if (!body) return;
+  const rows = Array.isArray(lista) && lista.length ? lista : [{}];
+  body.innerHTML = rows.map(m => htmlMateriaisRow(m)).join("");
+}
+
+function getMateriaisFromForm() {
+  const body = document.getElementById("materiais-body");
+  if (!body) return [];
+  const out = [];
+  body.querySelectorAll(".mat-row").forEach(row => {
+    const desc = (row.querySelector(".mat-desc")?.value || "").trim();
+    const qtd = Math.max(0, Number(row.querySelector(".mat-qtd")?.value) || 0);
+    const valorUnit = Math.max(0, Number(row.querySelector(".mat-unit")?.value) || 0);
+    if (!desc && qtd * valorUnit === 0) return;
+    out.push({ desc, qtd, valorUnit });
+  });
+  return out;
+}
+
+function totalMateriaisDoForm() {
+  const body = document.getElementById("materiais-body");
+  if (!body) return 0;
+  let t = 0;
+  body.querySelectorAll(".mat-row").forEach(row => {
+    const q = Math.max(0, Number(row.querySelector(".mat-qtd")?.value) || 0);
+    const u = Math.max(0, Number(row.querySelector(".mat-unit")?.value) || 0);
+    t += q * u;
+  });
+  return Math.round(t * 100) / 100;
+}
+
+function appendMateriaisRow() {
+  const body = document.getElementById("materiais-body");
+  if (!body) return;
+  body.insertAdjacentHTML("beforeend", htmlMateriaisRow({}));
+  calcularTotalChecklist();
+}
+
+function wireMateriaisFormOnce() {
+  const wrap = document.getElementById("materiais-wrap");
+  if (!wrap || wrap.dataset.osWired === "1") return;
+  wrap.dataset.osWired = "1";
+  const body = document.getElementById("materiais-body");
+  body?.addEventListener("input", () => calcularTotalChecklist());
+  wrap.querySelector("#material-somar-orcamento")?.addEventListener("change", calcularTotalChecklist);
+  wrap.addEventListener("click", e => {
+    if (e.target.closest("#btn-mat-add")) {
+      appendMateriaisRow();
+      return;
+    }
+    const rm = e.target.closest(".btn-mat-remove");
+    if (!rm || !body) return;
+    const row = rm.closest(".mat-row");
+    const rows = body.querySelectorAll(".mat-row");
+    if (rows.length <= 1) {
+      const d = row.querySelector(".mat-desc");
+      const q = row.querySelector(".mat-qtd");
+      const u = row.querySelector(".mat-unit");
+      if (d) d.value = "";
+      if (q) q.value = "";
+      if (u) u.value = "";
+    } else {
+      row.remove();
+    }
+    calcularTotalChecklist();
+  });
+}
+
 function calcularTotalChecklist() {
   if (valorManual) return;
   const campo = document.getElementById("orcamento");
@@ -801,7 +928,9 @@ function calcularTotalChecklist() {
   });
   const extra = Number(document.getElementById("extraValor").value) || 0;
   const desconto = Number(document.getElementById("desconto").value) || 0;
-  total = total + extra - desconto;
+  const matIncl =
+    document.getElementById("material-somar-orcamento")?.checked !== false ? totalMateriaisDoForm() : 0;
+  total = total + extra + matIncl - desconto;
   campo.value = total > 0 ? total : 0;
 }
 
@@ -1049,6 +1178,8 @@ async function duplicarOs(origId) {
     extraValor: 0,
     desconto: 0,
     orcamento: 0,
+    materiais: [],
+    materialSomarOrcamento: true,
     pagamento: "pendente",
     fotos: { antes: "", depois: "" },
     status: "entrada",
@@ -1088,6 +1219,7 @@ async function load() {
   servicos.forEach(garantirArrayPagamentos);
   servicos.forEach(normalizarFotosServico);
   servicos.forEach(normalizarInstrumento);
+  servicos.forEach(normalizarMateriais);
   await loadClientesInMemory();
   bindClienteAutocompleteOnce();
   render();
@@ -1170,10 +1302,14 @@ function renderCard(s, statusColuna = null) {
   garantirArrayPagamentos(s);
   normalizarFotosServico(s);
   normalizarInstrumento(s);
+  normalizarMateriais(s);
   const instLinha = resumoInstrumento(s);
 
+  const matSub = subtotalMateriaisOs(s);
+  const matSomado = s.materialSomarOrcamento !== false ? matSub : 0;
   const base = (s.orcamento || 0)
     - (Number(s.extraValor) || 0)
+    - matSomado
     + (Number(s.desconto) || 0);
 
   const total = Number(s.orcamento) || 0;
@@ -1182,6 +1318,34 @@ function renderCard(s, statusColuna = null) {
   const pago = restante <= 0 && total > 0;
   const progresso = total > 0 ? (recebido / total) * 100 : 0;
   const mostrarFinanceiro = total > 0 || recebido > 0;
+
+  const temMatLista = s.materiais.some(m => m.desc || m.qtd * m.valorUnit > 0);
+  const matLinhasHtml = s.materiais
+    .filter(m => m.desc || m.qtd * m.valorUnit > 0)
+    .map(m => {
+      const sub = Math.round(m.qtd * m.valorUnit * 100) / 100;
+      const label = m.desc || "(sem nome)";
+      const bits = [];
+      if (m.qtd) bits.push(`${m.qtd} un.`);
+      if (m.valorUnit) bits.push(`R$ ${m.valorUnit}/un`);
+      if (sub > 0) bits.push(`= R$ ${sub}`);
+      const tail = bits.length ? ` — ${bits.join(" · ")}` : "";
+      return `<div class="mat-linha-card">${escapeHtml(`${label}${tail}`)}</div>`;
+    })
+    .join("");
+  const matBlocoHtml = temMatLista
+    ? `
+          <div class="mat-bloco">
+            <div class="servico-header">
+              <span>Material</span>
+              ${matSub > 0 ? `<span class="servico-valor">R$ ${escapeHtml(String(matSub))}</span>` : ""}
+            </div>
+            ${s.materialSomarOrcamento === false ? `<p class="mat-nao-soma">Só registro — não entra no total.</p>` : ""}
+            <div class="mat-linhas">
+              ${matLinhasHtml}
+            </div>
+          </div>`
+    : "";
 
   const idAttr = escapeAttr(s.id);
   const fotosHtml = (s.fotos.antes || s.fotos.depois) ? `
@@ -1227,7 +1391,7 @@ function renderCard(s, statusColuna = null) {
       </div>
       ${fotosHtml}
       ${notasBlock}
-      ${(s.servicos?.length || s.extraNome) ? `
+      ${(s.servicos?.length || s.extraNome || temMatLista) ? `
         <div class="card-servicos">
           ${s.servicos?.length ? `
             <div class="servico-bloco">
@@ -1247,6 +1411,7 @@ function renderCard(s, statusColuna = null) {
               </div>
               <span class="tag-servico tag-extra">${escapeHtml(s.extraNome)}</span>
             </div>` : ""}
+          ${matBlocoHtml}
         </div>` : ""}
       ${mostrarFinanceiro ? `
         <div class="financeiro">
@@ -1755,7 +1920,10 @@ function baixarCsvOs(incluirArquivadas) {
     "Saldo",
     "PagamentoLegado",
     "Problema",
-    "NotasInternas"
+    "NotasInternas",
+    "MaterialResumo",
+    "MaterialSubtotal",
+    "MaterialSomarNoTotal"
   ];
 
   const lines = [headers.join(";")];
@@ -1763,6 +1931,7 @@ function baixarCsvOs(incluirArquivadas) {
   for (const s of rows) {
     garantirArrayPagamentos(s);
     normalizarInstrumento(s);
+    normalizarMateriais(s);
     const rec = totalRecebidoOs(s);
     const orc = Number(s.orcamento) || 0;
     const servs = Array.isArray(s.servicos) ? s.servicos.join(" | ") : "";
@@ -1789,7 +1958,10 @@ function baixarCsvOs(incluirArquivadas) {
       String(Math.round((orc - rec) * 100) / 100),
       s.pagamento || "pendente",
       s.problema || "",
-      s.notasInternas || ""
+      s.notasInternas || "",
+      resumoMateriaisCsv(s),
+      String(subtotalMateriaisOs(s)),
+      s.materialSomarOrcamento !== false ? "sim" : "nao"
     ].map(escapeCsvCell);
     lines.push(line.join(";"));
   }
@@ -1862,6 +2034,7 @@ function onImportFileChange(e) {
                 servicos = data.servicos;
                 servicos.forEach(garantirArrayPagamentos);
                 servicos.forEach(normalizarInstrumento);
+                servicos.forEach(normalizarMateriais);
                 if (temCatalogo) {
                   catalogoAtual = normalizarCatalogo(data.catalogo);
                   await saveCatalogo();
@@ -1876,6 +2049,7 @@ function onImportFileChange(e) {
                 servicos = data;
                 servicos.forEach(garantirArrayPagamentos);
                 servicos.forEach(normalizarInstrumento);
+                servicos.forEach(normalizarMateriais);
                 clientes = buildClientesFromServicos(servicos);
                 await saveClientes();
               }
@@ -1904,6 +2078,7 @@ function editar(id) {
   if (!s) return;
   normalizarFotosServico(s);
   normalizarInstrumento(s);
+  normalizarMateriais(s);
 
   document.getElementById("form-title").textContent = "Editar ordem de serviço";
   document.getElementById("cliente").value = s.cliente || "";
@@ -1935,6 +2110,9 @@ function editar(id) {
   carregarFotosNoForm(s.fotos);
 
   preencherChecklistSelecionado(s.servicos);
+  renderMateriaisForm(s.materiais);
+  const chkMat = document.getElementById("material-somar-orcamento");
+  if (chkMat) chkMat.checked = s.materialSomarOrcamento !== false;
   valorManual = false;
   editingId = id;
   abrirForm();
@@ -1955,9 +2133,11 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   const extra = Number(document.getElementById("extraValor").value) || 0;
   const desconto = Number(document.getElementById("desconto").value) || 0;
+  const matIncl =
+    document.getElementById("material-somar-orcamento")?.checked !== false ? totalMateriaisDoForm() : 0;
   const valorFinal = valorManual
     ? Number(document.getElementById("orcamento").value)
-    : (valorTotal + extra - desconto);
+    : (valorTotal + extra + matIncl - desconto);
 
   const payloadBase = {
     cliente: document.getElementById("cliente").value,
@@ -1975,6 +2155,8 @@ document.getElementById("form").addEventListener("submit", async e => {
     extraNome: document.getElementById("extraNome").value,
     extraValor: extra,
     desconto,
+    materiais: getMateriaisFromForm(),
+    materialSomarOrcamento: document.getElementById("material-somar-orcamento")?.checked !== false,
     pagamento: document.getElementById("pagamento").value,
     fotos: {
       antes: fotosFormState.antes || "",
@@ -2020,6 +2202,7 @@ document.getElementById("form").addEventListener("submit", async e => {
   e.target.reset();
   resetFotosForm();
   renderChecklist();
+  renderMateriaisForm([]);
   fecharForm();
   document.getElementById("form-title").textContent = "Nova ordem de serviço";
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2062,6 +2245,8 @@ async function iniciarPainel() {
 
   await loadCatalogoInMemory();
   renderChecklist();
+  wireMateriaisFormOnce();
+  renderMateriaisForm([]);
 
   document.getElementById("kanban").addEventListener("click", onKanbanClick);
 
@@ -2073,6 +2258,7 @@ async function iniciarPainel() {
     resetFotosForm();
     document.getElementById("form-title").textContent = "Nova ordem de serviço";
     renderChecklist();
+    renderMateriaisForm([]);
     abrirForm();
   };
 
