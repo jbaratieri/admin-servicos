@@ -1301,6 +1301,30 @@ button[type="submit"] {
   gap: 6px;
 }
 
+.card-notas--plain.card-notas--serv-extra {
+  background: linear-gradient(145deg, #fff7ed 0%, #fafaf9 52%, #fafaf9 100%);
+  border-color: #fed7aa;
+  box-shadow:
+    0 1px 2px rgba(234, 88, 12, 0.06),
+    0 3px 10px rgba(234, 88, 12, 0.07);
+}
+
+.card-notas--plain.card-notas--serv-extra summary {
+  color: #9a3412;
+}
+
+.card-notas--plain.card-notas--material {
+  background: linear-gradient(145deg, #f0f9ff 0%, #fafaf9 52%, #fafaf9 100%);
+  border-color: #bae6fd;
+  box-shadow:
+    0 1px 2px rgba(3, 105, 161, 0.06),
+    0 3px 10px rgba(3, 105, 161, 0.07);
+}
+
+.card-notas--plain.card-notas--material summary {
+  color: #0369a1;
+}
+
 .card-linha-detalhe {
   display: flex;
   justify-content: space-between;

@@ -73,7 +73,7 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
-const APP_VERSION = "2.8.1";
+const APP_VERSION = "2.8.2";
 
 let storageHintUserDismissed = false;
 let storageHintHideTimer = null;
@@ -1362,7 +1362,7 @@ function renderCard(s, statusColuna = null) {
     : "";
 
   const detServicosExtraHtml = temServicosOuExtra
-    ? `<details class="card-notas card-notas--plain">
+    ? `<details class="card-notas card-notas--plain card-notas--serv-extra">
         <summary>${escapeHtml(sumarioServicos)}</summary>
         <div class="notas-body">
           ${servicosLinhasHtml}
@@ -1376,7 +1376,7 @@ function renderCard(s, statusColuna = null) {
   if (s.materialSomarOrcamento === false) sumarioMaterial += " (só registro)";
 
   const detMaterialHtml = temMatLista
-    ? `<details class="card-notas card-notas--plain">
+    ? `<details class="card-notas card-notas--plain card-notas--material">
         <summary>${escapeHtml(sumarioMaterial)}</summary>
         <div class="notas-body">
           ${s.materialSomarOrcamento === false ? `<p class="mat-nao-soma">Não entra no total desta OS.</p>` : ""}
