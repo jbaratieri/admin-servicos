@@ -27,17 +27,23 @@
     <div class="auth-gate-card">
       <img class="auth-gate-logo" src="/assets/logotipo.png" alt="Luthieria Baratieri">
       <h1 id="auth-gate-title" class="auth-gate-title">Painel OS Baratieri</h1>
-      <p class="auth-gate-lead">Digite o código de acesso que você recebeu.</p>
+      <p class="auth-gate-lead">Digite o código que chegou no <strong>e-mail da sua compra</strong>. Maiúsculas ou minúsculas, tanto faz.</p>
       <form id="auth-gate-form" class="auth-gate-form">
         <label class="sr-only" for="auth-code">Código de acesso</label>
         <input id="auth-code" name="code" type="text" autocomplete="one-time-code" autocapitalize="characters"
-          placeholder="Código" required>
-        <button type="submit" class="auth-gate-submit">Entrar</button>
+          placeholder="Ex.: ABC12XYZ" required>
+        <button type="submit" class="auth-gate-submit">Entrar no painel</button>
       </form>
       <p id="auth-gate-msg" class="auth-gate-msg" aria-live="polite"></p>
+      <div class="auth-gate-hint" role="region" aria-label="Resgatar licença">
+        <p class="auth-gate-hint-text">
+          Primeira vez aqui ou não encontrou o código?
+          <a class="auth-gate-hint-link" href="./resgatar.html">Resgatar licença</a>
+        </p>
+        <p class="auth-gate-hint-sub">Use o mesmo e-mail da compra na Hotmart — é rápido.</p>
+      </div>
       <div class="auth-gate-help" role="note">
-        <p class="auth-gate-help-title">Esqueceu o código?</p>
-        <p class="auth-gate-help-lead">Entre em contato com a Luthieria Baratieri:</p>
+        <p class="auth-gate-help-title">Precisa de ajuda?</p>
         <p class="auth-gate-contact">
           <a class="auth-gate-contact-link" href="mailto:baratieriluthieria@gmail.com">baratieriluthieria@gmail.com</a>
           <span class="auth-gate-contact-sep" aria-hidden="true">·</span>
