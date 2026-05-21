@@ -982,8 +982,18 @@ a {
   border-bottom: none;
 }
 
-.mat-row .mat-desc {
+.mat-desc-cell {
+  position: relative;
   min-width: 0;
+}
+
+.mat-desc-cell .mat-desc {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mat-desc-cell .peca-suggestions {
+  z-index: 50;
 }
 
 .mat-row .mat-qtd,

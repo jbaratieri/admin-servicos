@@ -58,13 +58,29 @@ const SERVICOS_PADRAO = [
   },
 ];
 
+/** Catálogo local de peças/materiais (preço unitário sugerido na OS). */
+const PECAS_PADRAO = [
+  { nome: "Cordas violão aço 010–046", preco: 0, unidade: "jogo" },
+  { nome: "Cordas violão nylon", preco: 0, unidade: "jogo" },
+  { nome: "Cordas baixo 4 cordas", preco: 0, unidade: "jogo" },
+  { nome: "Tarraxas (par)", preco: 0, unidade: "par" },
+  { nome: "Pestana (nut) osso/sintético", preco: 0, unidade: "un" },
+  { nome: "Rastilho (saddle)", preco: 0, unidade: "un" },
+  { nome: "Cavalete", preco: 0, unidade: "un" },
+  { nome: "Traste", preco: 0, unidade: "un" },
+  { nome: "Tensor", preco: 0, unidade: "un" },
+  { nome: "Capotraste", preco: 0, unidade: "un" }
+];
+
 const IDB_NAME = "luthier-os-local-v1";
 const IDB_STORE = "kv";
 const IDB_KEY_SERVICOS = "servicos";
 const IDB_KEY_CATALOGO = "catalogo";
+const IDB_KEY_PECAS = "pecas";
 const IDB_KEY_CLIENTES = "clientes";
 const LS_FALLBACK = "luthier-os-servicos-v1";
 const LS_CATALOGO_KEY = "luthier-catalogo-local-v1";
+const LS_PECAS_KEY = "luthier-pecas-local-v1";
 const LS_LAST_BACKUP_EXPORT_AT = "luthier-last-backup-export-at-v1";
 const LS_LAST_BACKUP_TOAST_AT = "luthier-last-backup-toast-at-v1";
 const IDB_VER = 1;
@@ -73,7 +89,7 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
-const APP_VERSION = "2.8.2";
+const APP_VERSION = "2.9.0";
 
 let storageHintUserDismissed = false;
 let storageHintHideTimer = null;
@@ -179,6 +195,55 @@ async function saveCatalogo() {
     await idbPut(IDB_KEY_CATALOGO, catalogoAtual);
   } catch {
     localStorage.setItem(LS_CATALOGO_KEY, JSON.stringify(catalogoAtual));
+  }
+}
+
+let pecasAtual = [];
+
+function pecasPadrao() {
+  return PECAS_PADRAO.map(p => ({
+    nome: p.nome,
+    preco: Math.max(0, Number(p.preco) || 0),
+    ...((p.unidade && String(p.unidade).trim()) ? { unidade: String(p.unidade).trim() } : {})
+  }));
+}
+
+function normalizarPecas(arr) {
+  return (Array.isArray(arr) ? arr : [])
+    .map(item => ({
+      nome: String(item?.nome ?? "").trim(),
+      preco: Math.max(0, Number(item?.preco) || 0),
+      ...((item?.unidade && String(item.unidade).trim()) ? { unidade: String(item.unidade).trim() } : {})
+    }))
+    .filter(x => x.nome);
+}
+
+async function loadPecasInMemory() {
+  try {
+    const p = await idbGet(IDB_KEY_PECAS);
+    if (Array.isArray(p)) {
+      pecasAtual = normalizarPecas(p);
+      return;
+    }
+  } catch {}
+  try {
+    const t = localStorage.getItem(LS_PECAS_KEY);
+    if (t) {
+      const p = JSON.parse(t);
+      if (Array.isArray(p)) {
+        pecasAtual = normalizarPecas(p);
+        return;
+      }
+    }
+  } catch {}
+  pecasAtual = pecasPadrao();
+}
+
+async function savePecas() {
+  try {
+    await idbPut(IDB_KEY_PECAS, pecasAtual);
+  } catch {
+    localStorage.setItem(LS_PECAS_KEY, JSON.stringify(pecasAtual));
   }
 }
 
@@ -452,6 +517,7 @@ function abrirForm() {
 
 function fecharForm() {
   hideClienteSuggestions();
+  hidePecaSuggestions();
   formContainer.classList.remove("is-open");
   formContainer.setAttribute("aria-hidden", "true");
 }
@@ -582,6 +648,7 @@ function abrirModalManualPainelOS() {
           <li><strong>Fluxo:</strong> no card, use <strong>➡️</strong> para avançar a etapa. No celular, deslize para alternar a coluna em foco.</li>
           <li><strong>Busca:</strong> filtre por cliente, instrumento ou texto da OS.</li>
           <li><strong>Preços:</strong> o botão <strong>Preços</strong> edita a tabela da checklist e do orçamento.</li>
+          <li><strong>Peças:</strong> o botão <strong>Peças</strong> cadastra cordas, tarrachas etc. com preço unitário sugerido; na OS, ao digitar material, aparecem sugestões da sua tabela.</li>
           <li><strong>Material:</strong> linhas com item, quantidade e valor unitário; marque <strong>Somar material no total</strong> para entrar no orçamento automático (desmarque só para anotar peças sem alterar o total).</li>
           <li><strong>Instrumento:</strong> escolha o <strong>tipo</strong>, marca/modelo, ano e série; use <strong>Complemento</strong> para detalhes livres. OS antigas só com texto continuam no resumo do card.</li>
           <li><strong>CSV:</strong> exporte uma <strong>planilha</strong> das OS (valores e recebimentos); opcional incluir arquivadas.</li>
@@ -667,12 +734,20 @@ function lerCatalogoDoModal() {
 
 function onCatalogRowRemoveClick(e) {
   const btn = e.target.closest(".btn-cat-remove");
-  if (!btn || !document.getElementById("catalog-rows")?.contains(btn)) return;
-  const wrap = document.getElementById("catalog-rows");
-  if (wrap.querySelectorAll(".catalog-row").length <= 1) {
-    showToast("Mantenha pelo menos um serviço na tabela");
-    return;
+  if (!btn) return;
+  const servWrap = document.getElementById("catalog-rows");
+  const pecasWrap = document.getElementById("pecas-rows");
+  const inServ = servWrap?.contains(btn);
+  const inPecas = pecasWrap?.contains(btn);
+  if (!inServ && !inPecas) return;
+
+  if (inServ) {
+    if (servWrap.querySelectorAll(".catalog-row").length <= 1) {
+      showToast("Mantenha pelo menos um serviço na tabela");
+      return;
+    }
   }
+
   const row = btn.closest(".catalog-row");
   const prev = row?.previousElementSibling;
   if (prev?.tagName === "HR" && prev.classList.contains("catalog-sep")) prev.remove();
@@ -728,6 +803,89 @@ function abrirEditorCatalogo() {
       "beforeend",
       '<hr class="catalog-sep">' + htmlCatalogRow({ nome: "", preco: 0, desc: "" })
     );
+  };
+}
+
+function htmlPecasRow(p) {
+  return `
+    <div class="catalog-row">
+      <div class="modal-field">
+        <label>Nome da peça / material</label>
+        <input type="text" class="peca-nome" value="${escapeAttr(p.nome)}" placeholder="Ex.: Cordas 010–046" autocomplete="off">
+      </div>
+      <div class="modal-field catalog-row-tools">
+        <div class="catalog-preco-wrap">
+          <label>Preço unit. (R$)</label>
+          <input type="number" class="peca-preco" min="0" step="0.01" value="${escapeAttr(String(p.preco ?? 0))}">
+        </div>
+        <button type="button" class="btn-cat-remove">Remover</button>
+      </div>
+      <div class="modal-field">
+        <label>Unidade <span class="hint">(opcional)</span></label>
+        <input type="text" class="peca-unidade" value="${escapeAttr(p.unidade || "")}" placeholder="jogo, par, un…" autocomplete="off">
+      </div>
+    </div>`;
+}
+
+function lerPecasDoModal() {
+  const root = document.getElementById("pecas-rows");
+  if (!root) return [];
+  const out = [];
+  root.querySelectorAll(".catalog-row").forEach(row => {
+    const nome = (row.querySelector(".peca-nome")?.value || "").trim();
+    const preco = Number(row.querySelector(".peca-preco")?.value) || 0;
+    const unidade = (row.querySelector(".peca-unidade")?.value || "").trim();
+    if (!nome) return;
+    out.push({ nome, preco, ...(unidade ? { unidade } : {}) });
+  });
+  return out;
+}
+
+function abrirEditorPecas() {
+  const rowsHtml = pecasAtual.length
+    ? pecasAtual.map(p => htmlPecasRow(p)).join('<hr class="catalog-sep">')
+    : htmlPecasRow({ nome: "", preco: 0, unidade: "" });
+  abrirModal({
+    title: "Catálogo de peças e materiais",
+    bodyHTML: `
+      <p class="modal-hint">Cadastre o que você usa na oficina (cordas, tarrachas, etc.) e o <strong>preço unitário sugerido</strong>. Na OS, ao preencher material, as sugestões vêm desta tabela. Dados só neste aparelho.</p>
+      <div id="pecas-rows">${rowsHtml}</div>
+      <button type="button" class="btn-modal-secondary catalog-add-btn" id="pecas-add" style="width:100%;margin-top:10px">＋ Incluir peça</button>`,
+    footerButtons: [
+      { label: "Fechar", onClick: () => fecharModal() },
+      {
+        label: "Restaurar padrão",
+        onClick: async () => {
+          if (!confirm("Substituir todo o catálogo de peças pelos itens iniciais do aplicativo?")) return;
+          pecasAtual = pecasPadrao();
+          await savePecas();
+          fecharModal();
+          showToast("Catálogo de peças restaurado");
+        }
+      },
+      {
+        label: "Salvar catálogo",
+        primary: true,
+        onClick: async () => {
+          const novo = lerPecasDoModal();
+          const comNome = novo.filter(x => x.nome);
+          const chaves = comNome.map(x => x.nome.toLowerCase());
+          if (chaves.length && new Set(chaves).size !== chaves.length) {
+            showToast("Há duas peças com o mesmo nome — ajuste antes de salvar");
+            return;
+          }
+          pecasAtual = novo;
+          await savePecas();
+          fecharModal();
+          showToast(pecasAtual.length ? "Catálogo de peças salvo" : "Catálogo vazio — cadastre peças quando quiser");
+        }
+      }
+    ]
+  });
+  document.getElementById("pecas-add").onclick = () => {
+    const root = document.getElementById("pecas-rows");
+    const sep = root.querySelector(".catalog-row") ? '<hr class="catalog-sep">' : "";
+    root.insertAdjacentHTML("beforeend", sep + htmlPecasRow({ nome: "", preco: 0, unidade: "" }));
   };
 }
 
@@ -840,11 +998,77 @@ function htmlMateriaisRow(m = {}) {
       : "";
   return `
     <div class="mat-row">
-      <input type="text" class="mat-desc" placeholder="Ex.: cordas" maxlength="120" value="${desc}">
+      <div class="mat-desc-cell field-autocomplete-wrap">
+        <input type="text" class="mat-desc" placeholder="Ex.: cordas" maxlength="120" value="${desc}" autocomplete="off" spellcheck="false">
+        <div class="peca-suggestions cliente-suggestions" role="listbox" hidden aria-label="Peças do catálogo"></div>
+      </div>
       <input type="number" class="mat-qtd" placeholder="Qtd" min="0" step="any" value="${qtd}">
       <input type="number" class="mat-unit" placeholder="Unit." min="0" step="0.01" value="${vu}">
       <button type="button" class="btn-mat-remove" title="Remover linha">×</button>
     </div>`;
+}
+
+function filtrarSugestoesPecas(texto) {
+  const q = String(texto || "").trim().toLowerCase();
+  if (!q || !pecasAtual.length) return [];
+  return pecasAtual
+    .filter(p => p.nome.toLowerCase().includes(q))
+    .slice(0, 8);
+}
+
+function hidePecaSuggestions() {
+  document.querySelectorAll(".peca-suggestions").forEach(box => {
+    box.hidden = true;
+    box.innerHTML = "";
+  });
+  document.querySelectorAll(".mat-desc").forEach(inp => inp.setAttribute("aria-expanded", "false"));
+}
+
+function aplicarPecaSugerida(peca, inputEl) {
+  const row = inputEl?.closest(".mat-row");
+  if (!row || !peca) return;
+  const desc = row.querySelector(".mat-desc");
+  const unit = row.querySelector(".mat-unit");
+  if (desc) desc.value = peca.nome;
+  if (unit && (Number(peca.preco) || 0) > 0) unit.value = peca.preco;
+  hidePecaSuggestions();
+  calcularTotalChecklist();
+}
+
+function renderPecaSuggestionsForInput(inputEl) {
+  if (!inputEl || !formContainer?.classList.contains("is-open")) return;
+  hidePecaSuggestions();
+  const list = filtrarSugestoesPecas(inputEl.value);
+  const box = inputEl.closest(".mat-desc-cell")?.querySelector(".peca-suggestions");
+  if (!box) return;
+  if (!list.length) return;
+
+  box.innerHTML = list
+    .map((p, i) => {
+      const meta = [];
+      if ((Number(p.preco) || 0) > 0) meta.push(`R$ ${p.preco}`);
+      if (p.unidade) meta.push(p.unidade);
+      const metaHtml = meta.length
+        ? `<span class="cj-meta">${escapeHtml(meta.join(" · "))}</span>`
+        : "";
+      return `
+    <button type="button" class="cliente-suggestion-item peca-suggestion-item" role="option" data-pi="${i}">
+      <span class="cj-nome">${escapeHtml(p.nome)}</span>
+      ${metaHtml}
+    </button>`;
+    })
+    .join("");
+
+  box.hidden = false;
+  inputEl.setAttribute("aria-expanded", "true");
+
+  box.querySelectorAll(".peca-suggestion-item").forEach(btn => {
+    btn.addEventListener("mousedown", e => {
+      e.preventDefault();
+      const i = Number(btn.dataset.pi);
+      if (Number.isFinite(i) && list[i]) aplicarPecaSugerida(list[i], inputEl);
+    });
+  });
 }
 
 function renderMateriaisForm(lista) {
@@ -892,7 +1116,13 @@ function wireMateriaisFormOnce() {
   if (!wrap || wrap.dataset.osWired === "1") return;
   wrap.dataset.osWired = "1";
   const body = document.getElementById("materiais-body");
-  body?.addEventListener("input", () => calcularTotalChecklist());
+  body?.addEventListener("input", e => {
+    if (e.target.classList.contains("mat-desc")) renderPecaSuggestionsForInput(e.target);
+    calcularTotalChecklist();
+  });
+  body?.addEventListener("focusin", e => {
+    if (e.target.classList.contains("mat-desc")) renderPecaSuggestionsForInput(e.target);
+  });
   wrap.querySelector("#material-somar-orcamento")?.addEventListener("change", calcularTotalChecklist);
   wrap.addEventListener("click", e => {
     if (e.target.closest("#btn-mat-add")) {
@@ -1150,8 +1380,9 @@ function bindClienteAutocompleteOnce() {
   inp.addEventListener("focus", () => renderClienteSuggestions());
 
   document.addEventListener("click", e => {
-    const wrap = document.querySelector(".field-autocomplete-wrap");
+    const wrap = document.querySelector("#cliente")?.closest(".field-autocomplete-wrap");
     if (wrap && !wrap.contains(e.target)) hideClienteSuggestions();
+    if (!e.target.closest(".mat-desc-cell")) hidePecaSuggestions();
   });
 }
 
@@ -2005,6 +2236,7 @@ function exportarBackup() {
     exportedAt: new Date().toISOString(),
     servicos,
     catalogo: catalogoAtual,
+    pecas: pecasAtual,
     clientes
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
@@ -2015,7 +2247,7 @@ function exportarBackup() {
   a.click();
   URL.revokeObjectURL(a.href);
   marcarBackupExportado();
-  showToast("Backup baixado (OS + clientes + tabela de preços)");
+  showToast("Backup baixado (OS + clientes + preços + peças)");
 }
 
 function onImportFileChange(e) {
@@ -2036,6 +2268,7 @@ function onImportFileChange(e) {
 
       const nOs = pacote ? data.servicos.length : data.length;
       const temCatalogo = pacote && Array.isArray(data.catalogo) && data.catalogo.length;
+      const temPecas = pacote && Array.isArray(data.pecas);
       const temClientes = pacote && Array.isArray(data.clientes) && data.clientes.length;
 
       abrirModal({
@@ -2043,6 +2276,7 @@ function onImportFileChange(e) {
         bodyHTML: `
           <p>O arquivo contém <strong>${nOs}</strong> ordem(ns) de serviço.</p>
           ${temCatalogo ? "<p>Também há uma <strong>tabela de preços</strong> no arquivo.</p>" : ""}
+          ${temPecas ? `<p>Também há <strong>catálogo de peças</strong> (${data.pecas.length} item(ns)).</p>` : ""}
           ${temClientes ? "<p>Também há <strong>clientes salvos</strong> para sugestão no formulário.</p>" : ""}
           <p class="modal-hint">Isso <strong>substitui</strong> os dados neste aparelho. Faça um backup atual antes, se precisar.</p>`,
         footerButtons: [
@@ -2059,6 +2293,10 @@ function onImportFileChange(e) {
                 if (temCatalogo) {
                   catalogoAtual = normalizarCatalogo(data.catalogo);
                   await saveCatalogo();
+                }
+                if (temPecas) {
+                  pecasAtual = normalizarPecas(data.pecas);
+                  await savePecas();
                 }
                 if (Array.isArray(data.clientes) && data.clientes.length) {
                   clientes = data.clientes.map(normalizarClienteRegistro).filter(c => c.nome);
@@ -2265,6 +2503,7 @@ async function iniciarPainel() {
   document.getElementById("modal-body").addEventListener("click", onCatalogRowRemoveClick);
 
   await loadCatalogoInMemory();
+  await loadPecasInMemory();
   renderChecklist();
   wireMateriaisFormOnce();
   renderMateriaisForm([]);
@@ -2273,6 +2512,7 @@ async function iniciarPainel() {
 
   document.getElementById("fab").onclick = () => {
     hideClienteSuggestions();
+    hidePecaSuggestions();
     editingId = null;
     valorManual = false;
     document.getElementById("form").reset();
@@ -2300,6 +2540,7 @@ async function iniciarPainel() {
   document.getElementById("btn-backup").addEventListener("click", exportarBackup);
   document.getElementById("btn-export-csv")?.addEventListener("click", abrirModalExportarCsv);
   document.getElementById("btn-catalogo")?.addEventListener("click", abrirEditorCatalogo);
+  document.getElementById("btn-pecas")?.addEventListener("click", abrirEditorPecas);
   document.getElementById("btn-import")?.addEventListener("click", () => {
     document.getElementById("import-file").click();
   });
