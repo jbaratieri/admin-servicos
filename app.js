@@ -89,7 +89,7 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
-const APP_VERSION = "2.9.0";
+const APP_VERSION = "2.9.1";
 
 let storageHintUserDismissed = false;
 let storageHintHideTimer = null;
@@ -998,9 +998,8 @@ function htmlMateriaisRow(m = {}) {
       : "";
   return `
     <div class="mat-row">
-      <div class="mat-desc-cell field-autocomplete-wrap">
-        <input type="text" class="mat-desc" placeholder="Ex.: cordas" maxlength="120" value="${desc}" autocomplete="off" spellcheck="false">
-        <div class="peca-suggestions cliente-suggestions" role="listbox" hidden aria-label="Peças do catálogo"></div>
+      <div class="mat-desc-cell">
+        <input type="text" class="mat-desc" placeholder="Digite p/ sugestões…" maxlength="120" value="${desc}" autocomplete="off" spellcheck="false" aria-controls="peca-suggestions-float" aria-autocomplete="list">
       </div>
       <input type="number" class="mat-qtd" placeholder="Qtd" min="0" step="any" value="${qtd}">
       <input type="number" class="mat-unit" placeholder="Unit." min="0" step="0.01" value="${vu}">
@@ -1008,20 +1007,59 @@ function htmlMateriaisRow(m = {}) {
     </div>`;
 }
 
+let activeMatDescInput = null;
+
+function normalizarBuscaPeca(s) {
+  return String(s || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+}
+
 function filtrarSugestoesPecas(texto) {
-  const q = String(texto || "").trim().toLowerCase();
-  if (!q || !pecasAtual.length) return [];
+  if (!pecasAtual.length) return [];
+  const q = normalizarBuscaPeca(texto);
+  if (!q) return pecasAtual.slice(0, 8);
   return pecasAtual
-    .filter(p => p.nome.toLowerCase().includes(q))
+    .filter(p => normalizarBuscaPeca(p.nome).includes(q))
     .slice(0, 8);
 }
 
+function getPecaSuggestionsFloat() {
+  return document.getElementById("peca-suggestions-float");
+}
+
 function hidePecaSuggestions() {
-  document.querySelectorAll(".peca-suggestions").forEach(box => {
+  activeMatDescInput = null;
+  const box = getPecaSuggestionsFloat();
+  if (box) {
     box.hidden = true;
     box.innerHTML = "";
-  });
+    box.removeAttribute("style");
+  }
   document.querySelectorAll(".mat-desc").forEach(inp => inp.setAttribute("aria-expanded", "false"));
+}
+
+function posicionarPecaSuggestionsFloat(inputEl) {
+  const box = getPecaSuggestionsFloat();
+  if (!box || !inputEl) return;
+  const r = inputEl.getBoundingClientRect();
+  const gap = 4;
+  const maxH = 220;
+  const espacoAbaixo = window.innerHeight - r.bottom - gap;
+  const espacoAcima = r.top - gap;
+  const abrirAcima = espacoAbaixo < 120 && espacoAcima > espacoAbaixo;
+  const altura = Math.min(maxH, Math.max(80, abrirAcima ? espacoAcima : espacoAbaixo));
+  let top = abrirAcima ? r.top - gap - altura : r.bottom + gap;
+  top = Math.max(8, Math.min(top, window.innerHeight - altura - 8));
+  const left = Math.max(8, Math.min(r.left, window.innerWidth - r.width - 8));
+  box.style.position = "fixed";
+  box.style.left = `${left}px`;
+  box.style.top = `${top}px`;
+  box.style.width = `${Math.min(r.width, window.innerWidth - 16)}px`;
+  box.style.maxHeight = `${altura}px`;
+  box.style.zIndex = "960";
 }
 
 function aplicarPecaSugerida(peca, inputEl) {
@@ -1037,11 +1075,25 @@ function aplicarPecaSugerida(peca, inputEl) {
 
 function renderPecaSuggestionsForInput(inputEl) {
   if (!inputEl || !formContainer?.classList.contains("is-open")) return;
-  hidePecaSuggestions();
-  const list = filtrarSugestoesPecas(inputEl.value);
-  const box = inputEl.closest(".mat-desc-cell")?.querySelector(".peca-suggestions");
+  const box = getPecaSuggestionsFloat();
   if (!box) return;
-  if (!list.length) return;
+
+  activeMatDescInput = inputEl;
+  const list = filtrarSugestoesPecas(inputEl.value);
+
+  if (!pecasAtual.length) {
+    box.innerHTML =
+      '<p class="peca-suggestions-empty">Catálogo vazio. Cadastre em <strong>Peças</strong> na barra do painel.</p>';
+    posicionarPecaSuggestionsFloat(inputEl);
+    box.hidden = false;
+    inputEl.setAttribute("aria-expanded", "true");
+    return;
+  }
+
+  if (!list.length) {
+    hidePecaSuggestions();
+    return;
+  }
 
   box.innerHTML = list
     .map((p, i) => {
@@ -1059,6 +1111,7 @@ function renderPecaSuggestionsForInput(inputEl) {
     })
     .join("");
 
+  posicionarPecaSuggestionsFloat(inputEl);
   box.hidden = false;
   inputEl.setAttribute("aria-expanded", "true");
 
@@ -1122,6 +1175,17 @@ function wireMateriaisFormOnce() {
   });
   body?.addEventListener("focusin", e => {
     if (e.target.classList.contains("mat-desc")) renderPecaSuggestionsForInput(e.target);
+  });
+  body?.addEventListener("scroll", () => {
+    if (activeMatDescInput) posicionarPecaSuggestionsFloat(activeMatDescInput);
+  }, true);
+  formContainer?.addEventListener("scroll", () => {
+    if (activeMatDescInput) posicionarPecaSuggestionsFloat(activeMatDescInput);
+  });
+  window.addEventListener("resize", () => {
+    if (activeMatDescInput && !getPecaSuggestionsFloat()?.hidden) {
+      posicionarPecaSuggestionsFloat(activeMatDescInput);
+    }
   });
   wrap.querySelector("#material-somar-orcamento")?.addEventListener("change", calcularTotalChecklist);
   wrap.addEventListener("click", e => {
@@ -1382,7 +1446,12 @@ function bindClienteAutocompleteOnce() {
   document.addEventListener("click", e => {
     const wrap = document.querySelector("#cliente")?.closest(".field-autocomplete-wrap");
     if (wrap && !wrap.contains(e.target)) hideClienteSuggestions();
-    if (!e.target.closest(".mat-desc-cell")) hidePecaSuggestions();
+    if (
+      !e.target.closest(".mat-desc") &&
+      !e.target.closest("#peca-suggestions-float")
+    ) {
+      hidePecaSuggestions();
+    }
   });
 }
 
