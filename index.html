@@ -117,25 +117,25 @@
       <label class="field-label" for="instrumento">Complemento <span class="hint">(opcional)</span></label>
       <input id="instrumento" placeholder="Cor, escala, captadores, observações…" autocomplete="off">
 
-      <label class="field-label">Fotos da OS <span class="hint">(opcional)</span></label>
+      <label class="field-label">Fotos da OS <span class="hint">(várias por etapa — defeitos, detalhes)</span></label>
       <div class="photo-fields">
-        <div class="photo-field-card">
+        <div class="photo-field-card" data-foto-lado="antes">
           <div class="photo-field-head">
             <strong>Antes</strong>
-            <button type="button" class="btn-photo-remove" id="fotoAntesRemover" hidden>Remover</button>
+            <span class="photo-count" id="fotoAntesCount" aria-live="polite"></span>
           </div>
-          <input type="file" id="fotoAntesInput" class="sr-only" accept="image/*" capture="environment">
-          <button type="button" class="btn-photo-pick" id="fotoAntesBtn">Tirar / escolher foto</button>
-          <img id="fotoAntesPreview" class="photo-preview" alt="Pré-visualização da foto de antes" hidden>
+          <div id="fotoAntesGaleria" class="photo-galeria" aria-label="Fotos antes do serviço"></div>
+          <input type="file" id="fotoAntesInput" class="sr-only" accept="image/*" capture="environment" multiple>
+          <button type="button" class="btn-photo-pick" id="fotoAntesBtn">＋ Adicionar foto</button>
         </div>
-        <div class="photo-field-card">
+        <div class="photo-field-card" data-foto-lado="depois">
           <div class="photo-field-head">
             <strong>Depois</strong>
-            <button type="button" class="btn-photo-remove" id="fotoDepoisRemover" hidden>Remover</button>
+            <span class="photo-count" id="fotoDepoisCount" aria-live="polite"></span>
           </div>
-          <input type="file" id="fotoDepoisInput" class="sr-only" accept="image/*" capture="environment">
-          <button type="button" class="btn-photo-pick" id="fotoDepoisBtn">Tirar / escolher foto</button>
-          <img id="fotoDepoisPreview" class="photo-preview" alt="Pré-visualização da foto de depois" hidden>
+          <div id="fotoDepoisGaleria" class="photo-galeria" aria-label="Fotos depois do serviço"></div>
+          <input type="file" id="fotoDepoisInput" class="sr-only" accept="image/*" capture="environment" multiple>
+          <button type="button" class="btn-photo-pick" id="fotoDepoisBtn">＋ Adicionar foto</button>
         </div>
       </div>
 

@@ -89,7 +89,8 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
-const APP_VERSION = "2.9.1";
+const APP_VERSION = "3.0.0";
+const MAX_FOTOS_POR_LADO = 12;
 
 let storageHintUserDismissed = false;
 let storageHintHideTimer = null;
@@ -311,7 +312,7 @@ let clientes = [];
 let currentStatusIndex = 0;
 let valorManual = false;
 let filtroBusca = "";
-let fotosFormState = { antes: "", depois: "" };
+let fotosFormState = { antes: [], depois: [] };
 
 const formContainer = document.getElementById("form-container");
 
@@ -330,16 +331,27 @@ function escapeAttr(s) {
     .replace(/>/g, "&gt;");
 }
 
+function fotosLadoParaArray(val) {
+  if (Array.isArray(val)) return val.filter(x => typeof x === "string" && x.trim());
+  if (typeof val === "string" && val.trim()) return [val];
+  return [];
+}
+
 function normalizarFotosServico(s) {
   const f = s?.fotos;
   if (!f || typeof f !== "object") {
-    s.fotos = { antes: "", depois: "" };
+    s.fotos = { antes: [], depois: [] };
     return;
   }
   s.fotos = {
-    antes: typeof f.antes === "string" ? f.antes : "",
-    depois: typeof f.depois === "string" ? f.depois : ""
+    antes: fotosLadoParaArray(f.antes).slice(0, MAX_FOTOS_POR_LADO),
+    depois: fotosLadoParaArray(f.depois).slice(0, MAX_FOTOS_POR_LADO)
   };
+}
+
+function totalFotosOs(s) {
+  normalizarFotosServico(s);
+  return s.fotos.antes.length + s.fotos.depois.length;
 }
 
 function normalizarInstrumento(s) {
@@ -428,43 +440,127 @@ function limparCamposInstrumentoForm() {
   if (liv) liv.value = "";
 }
 
-function atualizarPreviewFoto(tipo) {
-  const isAntes = tipo === "antes";
-  const preview = document.getElementById(isAntes ? "fotoAntesPreview" : "fotoDepoisPreview");
-  const remover = document.getElementById(isAntes ? "fotoAntesRemover" : "fotoDepoisRemover");
-  const valor = fotosFormState[tipo] || "";
-  if (!preview || !remover) return;
-  if (!valor) {
-    preview.hidden = true;
-    preview.removeAttribute("src");
-    remover.hidden = true;
+function renderGaleriaFotosForm(lado) {
+  const galeria = document.getElementById(lado === "antes" ? "fotoAntesGaleria" : "fotoDepoisGaleria");
+  const countEl = document.getElementById(lado === "antes" ? "fotoAntesCount" : "fotoDepoisCount");
+  const btn = document.getElementById(lado === "antes" ? "fotoAntesBtn" : "fotoDepoisBtn");
+  if (!galeria) return;
+  const lista = Array.isArray(fotosFormState[lado]) ? fotosFormState[lado] : [];
+  if (countEl) {
+    countEl.textContent = lista.length ? `${lista.length} foto${lista.length > 1 ? "s" : ""}` : "";
+  }
+  if (btn) {
+    btn.disabled = lista.length >= MAX_FOTOS_POR_LADO;
+    btn.textContent = lista.length >= MAX_FOTOS_POR_LADO
+      ? `Limite (${MAX_FOTOS_POR_LADO})`
+      : "＋ Adicionar foto";
+  }
+  if (!lista.length) {
+    galeria.innerHTML = '<p class="photo-galeria-empty">Nenhuma foto ainda</p>';
     return;
   }
-  preview.src = valor;
-  preview.hidden = false;
-  remover.hidden = false;
+  galeria.innerHTML = lista
+    .map(
+      (src, i) => `
+    <div class="photo-thumb-wrap">
+      <button type="button" class="photo-thumb-btn" data-foto-lado="${escapeAttr(lado)}" data-foto-ix="${i}" title="Ver foto">
+        <img src="${escapeAttr(src)}" alt="Foto ${lado} ${i + 1}">
+      </button>
+      <button type="button" class="photo-thumb-remove" data-foto-lado="${escapeAttr(lado)}" data-foto-ix="${i}" title="Remover">×</button>
+    </div>`
+    )
+    .join("");
 }
 
-function atualizarPreviewsFotosForm() {
-  atualizarPreviewFoto("antes");
-  atualizarPreviewFoto("depois");
+function renderGaleriasFotosForm() {
+  renderGaleriaFotosForm("antes");
+  renderGaleriaFotosForm("depois");
 }
 
 function resetFotosForm() {
-  fotosFormState = { antes: "", depois: "" };
+  fotosFormState = { antes: [], depois: [] };
   const inputAntes = document.getElementById("fotoAntesInput");
   const inputDepois = document.getElementById("fotoDepoisInput");
   if (inputAntes) inputAntes.value = "";
   if (inputDepois) inputDepois.value = "";
-  atualizarPreviewsFotosForm();
+  renderGaleriasFotosForm();
 }
 
 function carregarFotosNoForm(fotos) {
+  const tmp = { fotos: fotos || {} };
+  normalizarFotosServico(tmp);
   fotosFormState = {
-    antes: fotos?.antes || "",
-    depois: fotos?.depois || ""
+    antes: [...tmp.fotos.antes],
+    depois: [...tmp.fotos.depois]
   };
-  atualizarPreviewsFotosForm();
+  renderGaleriasFotosForm();
+}
+
+async function adicionarFotosAoForm(lado, files) {
+  const arr = fotosFormState[lado];
+  const vagas = MAX_FOTOS_POR_LADO - arr.length;
+  if (vagas <= 0) {
+    showToast(`Máximo de ${MAX_FOTOS_POR_LADO} fotos em ${lado === "antes" ? "Antes" : "Depois"}`);
+    return;
+  }
+  const lista = Array.from(files || []).slice(0, vagas);
+  let ok = 0;
+  for (const file of lista) {
+    try {
+      const data = await processarFotoArquivo(file);
+      if (data) {
+        arr.push(data);
+        ok++;
+      }
+    } catch {
+      /* ignora arquivo inválido */
+    }
+  }
+  if (ok) showToast(ok === 1 ? "Foto adicionada" : `${ok} fotos adicionadas`);
+  else if (lista.length) showToast("Não foi possível processar a(s) foto(s)");
+  renderGaleriaFotosForm(lado);
+}
+
+function removerFotoDoForm(lado, index) {
+  const arr = fotosFormState[lado];
+  if (!Array.isArray(arr) || index < 0 || index >= arr.length) return;
+  arr.splice(index, 1);
+  renderGaleriaFotosForm(lado);
+}
+
+function wireFotosFormOnce() {
+  if (window.__osFotosWired) return;
+  window.__osFotosWired = true;
+
+  const bindLado = lado => {
+    document.getElementById(lado === "antes" ? "fotoAntesBtn" : "fotoDepoisBtn")?.addEventListener("click", () => {
+      document.getElementById(lado === "antes" ? "fotoAntesInput" : "fotoDepoisInput")?.click();
+    });
+    document.getElementById(lado === "antes" ? "fotoAntesInput" : "fotoDepoisInput")?.addEventListener("change", async e => {
+      await adicionarFotosAoForm(lado, e.target.files);
+      e.target.value = "";
+    });
+  };
+  bindLado("antes");
+  bindLado("depois");
+
+  document.querySelector(".photo-fields")?.addEventListener("click", e => {
+    const rm = e.target.closest(".photo-thumb-remove");
+    if (rm) {
+      removerFotoDoForm(rm.dataset.fotoLado, Number(rm.dataset.fotoIx));
+      return;
+    }
+    const ver = e.target.closest(".photo-thumb-btn");
+    if (ver) {
+      const lado = ver.dataset.fotoLado;
+      const ix = Number(ver.dataset.fotoIx);
+      const src = fotosFormState[lado]?.[ix];
+      if (src) {
+        const titulo = `${lado === "antes" ? "Antes" : "Depois"} · foto ${ix + 1}`;
+        abrirVisualizacaoFoto(src, titulo);
+      }
+    }
+  });
 }
 
 async function processarFotoArquivo(file) {
@@ -650,6 +746,8 @@ function abrirModalManualPainelOS() {
           <li><strong>Preços:</strong> o botão <strong>Preços</strong> edita a tabela da checklist e do orçamento.</li>
           <li><strong>Peças:</strong> o botão <strong>Peças</strong> cadastra cordas, tarrachas etc. com preço unitário sugerido; na OS, ao digitar material, aparecem sugestões da sua tabela.</li>
           <li><strong>Material:</strong> linhas com item, quantidade e valor unitário; marque <strong>Somar material no total</strong> para entrar no orçamento automático (desmarque só para anotar peças sem alterar o total).</li>
+          <li><strong>Fotos:</strong> em cada OS você pode adicionar <strong>várias fotos</strong> em Antes e Depois (até ${MAX_FOTOS_POR_LADO} por etapa).</li>
+          <li><strong>Orçamento:</strong> no card, <strong>📄</strong> abre o orçamento para imprimir ou salvar como PDF; <strong>📲</strong> envia mensagem completa no WhatsApp.</li>
           <li><strong>Instrumento:</strong> escolha o <strong>tipo</strong>, marca/modelo, ano e série; use <strong>Complemento</strong> para detalhes livres. OS antigas só com texto continuam no resumo do card.</li>
           <li><strong>CSV:</strong> exporte uma <strong>planilha</strong> das OS (valores e recebimentos); opcional incluir arquivadas.</li>
           <li><strong>Backup / importar:</strong> exporte JSON com regularidade. Importar substitui os dados locais — use só se souber o que está fazendo.</li>
@@ -1481,7 +1579,7 @@ async function duplicarOs(origId) {
     materiais: [],
     materialSomarOrcamento: true,
     pagamento: "pendente",
-    fotos: { antes: "", depois: "" },
+    fotos: { antes: [], depois: [] },
     status: "entrada",
     pagamentos: [],
     data: new Date().toISOString(),
@@ -1686,11 +1784,21 @@ function renderCard(s, statusColuna = null) {
     : "";
 
   const idAttr = escapeAttr(s.id);
-  const fotosHtml = (s.fotos.antes || s.fotos.depois) ? `
-  <div class="card-fotos">
-    ${s.fotos.antes ? `<button type="button" class="foto-chip" data-action="view-photo" data-id="${idAttr}" data-label="Antes" data-src="${escapeAttr(s.fotos.antes)}"><img src="${escapeAttr(s.fotos.antes)}" alt="Foto antes"><span>Antes</span></button>` : ""}
-    ${s.fotos.depois ? `<button type="button" class="foto-chip" data-action="view-photo" data-id="${idAttr}" data-label="Depois" data-src="${escapeAttr(s.fotos.depois)}"><img src="${escapeAttr(s.fotos.depois)}" alt="Foto depois"><span>Depois</span></button>` : ""}
-  </div>` : "";
+  const chipsAntes = s.fotos.antes
+    .map(
+      (src, i) =>
+        `<button type="button" class="foto-chip" data-action="view-photo" data-src="${escapeAttr(src)}" data-label="${escapeAttr(`Antes ${i + 1}/${s.fotos.antes.length}`)}"><img src="${escapeAttr(src)}" alt=""><span>${s.fotos.antes.length > 1 ? `Antes ${i + 1}` : "Antes"}</span></button>`
+    )
+    .join("");
+  const chipsDepois = s.fotos.depois
+    .map(
+      (src, i) =>
+        `<button type="button" class="foto-chip" data-action="view-photo" data-src="${escapeAttr(src)}" data-label="${escapeAttr(`Depois ${i + 1}/${s.fotos.depois.length}`)}"><img src="${escapeAttr(src)}" alt=""><span>${s.fotos.depois.length > 1 ? `Depois ${i + 1}` : "Depois"}</span></button>`
+    )
+    .join("");
+  const fotosHtml = chipsAntes || chipsDepois
+    ? `<div class="card-fotos">${chipsAntes}${chipsDepois}</div>`
+    : "";
   const notasBlock = (s.notasInternas && String(s.notasInternas).trim())
     ? `<details class="card-notas"><summary>Notas da oficina</summary><div class="notas-body">${escapeHtml(s.notasInternas)}</div></details>`
     : "";
@@ -1749,7 +1857,8 @@ function renderCard(s, statusColuna = null) {
         </div>` : ""}
       <div class="card-footer">
         <div class="card-actions">
-          <button type="button" class="card-action" data-action="wa" data-id="${idAttr}" title="WhatsApp">📲</button>
+          <button type="button" class="card-action" data-action="wa" data-id="${idAttr}" title="WhatsApp (mensagem com orçamento)">📲</button>
+          <button type="button" class="card-action" data-action="orcamento-print" data-id="${idAttr}" title="Orçamento para imprimir / PDF">📄</button>
           <button type="button" class="card-action" data-action="edit" data-id="${idAttr}" title="Editar OS">✏️</button>
           <button type="button" class="card-action" data-action="duplicate" data-id="${idAttr}" title="Duplicar OS (mesmo cliente)">📋</button>
           <button type="button" class="card-action" data-action="next" data-id="${idAttr}" title="Próxima etapa">➡️</button>
@@ -1829,6 +1938,9 @@ function onKanbanClick(e) {
     case "wa":
       abrirWhatsApp(serv);
       break;
+    case "orcamento-print":
+      abrirOrcamentoImprimivel(serv);
+      break;
     case "edit":
       editar(id);
       break;
@@ -1878,7 +1990,7 @@ function abrirVisualizacaoFoto(src, label = "Foto") {
 }
 
 function abrirWhatsApp(s) {
-  const url = gerarLinkWhatsApp(s.telefone, s.cliente, s.status || "entrada", s.orcamento);
+  const url = gerarLinkWhatsApp(s);
   if (url !== "#") window.open(url, "_blank");
   else showToast("Telefone invalido na OS");
 }
@@ -1891,24 +2003,229 @@ function normalizarNumeroWhatsApp(telefone) {
   return "";
 }
 
-function gerarLinkWhatsApp(telefone, nome, status, valor) {
-  if (!telefone) return "#";
-  const numero = normalizarNumeroWhatsApp(telefone);
-  if (!numero) return "#";
-  const v = valor || "0";
-  const n = nome || "cliente";
-  let mensagem = "";
+function montarLinhasOrcamentoTexto(s) {
+  normalizarInstrumento(s);
+  normalizarMateriais(s);
+  const linhas = [];
+  const inst = resumoInstrumento(s);
+  if (inst) linhas.push(`Instrumento: ${inst}`);
+  if (s.problema && String(s.problema).trim()) {
+    linhas.push(`Pedido: ${String(s.problema).trim()}`);
+  }
+
+  let subServicos = 0;
+  if (s.servicos?.length) {
+    linhas.push("");
+    linhas.push("Serviços:");
+    s.servicos.forEach(nome => {
+      const p = precoServicoCatalogo(nome);
+      if (p != null) {
+        subServicos += p;
+        linhas.push(`• ${nome} — R$ ${fmtBRL(p)}`);
+      } else {
+        linhas.push(`• ${nome}`);
+      }
+    });
+  }
+
+  const extraVal = Number(s.extraValor) || 0;
+  if (s.extraNome && String(s.extraNome).trim()) {
+    linhas.push("");
+    linhas.push(`Extra: ${String(s.extraNome).trim()}${extraVal ? ` — R$ ${fmtBRL(extraVal)}` : ""}`);
+  }
+
+  const matSub = subtotalMateriaisOs(s);
+  const matItens = s.materiais.filter(m => m.desc || m.qtd * m.valorUnit > 0);
+  if (matItens.length) {
+    linhas.push("");
+    linhas.push(`Material${s.materialSomarOrcamento === false ? " (só registro)" : ""}:`);
+    matItens.forEach(m => {
+      const sub = Math.round(m.qtd * m.valorUnit * 100) / 100;
+      const d = m.desc || "(item)";
+      linhas.push(`• ${d} — ${m.qtd} × R$ ${fmtBRL(m.valorUnit)} = R$ ${fmtBRL(sub)}`);
+    });
+    if (matSub > 0 && s.materialSomarOrcamento !== false) {
+      linhas.push(`Subtotal material: R$ ${fmtBRL(matSub)}`);
+    }
+  }
+
+  const desconto = Number(s.desconto) || 0;
+  if (desconto > 0) linhas.push(`Desconto: − R$ ${fmtBRL(desconto)}`);
+
+  const total = Number(s.orcamento) || 0;
+  if (total > 0) {
+    linhas.push("");
+    linhas.push(`*TOTAL: R$ ${fmtBRL(total)}*`);
+  } else if (subServicos + extraVal + (s.materialSomarOrcamento !== false ? matSub : 0) - desconto > 0) {
+    const est =
+      subServicos + extraVal + (s.materialSomarOrcamento !== false ? matSub : 0) - desconto;
+    linhas.push("");
+    linhas.push(`*Total estimado: R$ ${fmtBRL(est)}*`);
+  }
+
+  return linhas;
+}
+
+function montarMensagemWhatsApp(s) {
+  const nome = s.cliente || "cliente";
+  const status = s.status || "entrada";
+  const total = Number(s.orcamento) || 0;
+  const detalhe = montarLinhasOrcamentoTexto(s).join("\n");
+  const cabecalho = `*Luthieria Baratieri*\nOS ${s.id || ""}\n`;
+
   switch (status) {
     case "orcamento":
-      mensagem = `Olá ${n}, seu orçamento ficou em R$ ${v}. Podemos prosseguir?`;
-      break;
+      return (
+        `${cabecalho}Olá ${nome}! Segue o orçamento do seu instrumento:\n\n` +
+        `${detalhe}\n\n` +
+        `Podemos seguir com o serviço? Qualquer dúvida, estou à disposição.`
+      );
     case "pronto":
-      mensagem = `Olá ${n}, seu instrumento está pronto. Valor: R$ ${v}`;
-      break;
+      return (
+        `${cabecalho}Olá ${nome}! Seu instrumento está *pronto* para retirada.` +
+        (total > 0 ? `\n\nValor total: *R$ ${fmtBRL(total)}*` : "") +
+        (detalhe ? `\n\n${detalhe}` : "") +
+        `\n\nAguardamos você na oficina.`
+      );
+    case "em_andamento":
+      return (
+        `${cabecalho}Olá ${nome}! Passando para avisar que seu instrumento está *em andamento* na oficina.` +
+        (total > 0 ? `\n\nOrçamento previsto: R$ ${fmtBRL(total)}` : "") +
+        `\n\nQualquer novidade, avisamos.`
+      );
     default:
-      mensagem = `Olá ${n}`;
+      return (
+        `${cabecalho}Olá ${nome}!` +
+        (detalhe ? `\n\n${detalhe}` : total > 0 ? `\n\nValor na OS: R$ ${fmtBRL(total)}` : "") +
+        `\n\nPainel OS Baratieri.`
+      );
   }
+}
+
+function gerarLinkWhatsApp(s) {
+  if (!s?.telefone) return "#";
+  const numero = normalizarNumeroWhatsApp(s.telefone);
+  if (!numero) return "#";
+  const mensagem = montarMensagemWhatsApp(s);
   return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+}
+
+function htmlOrcamentoImprimivel(s) {
+  normalizarInstrumento(s);
+  normalizarMateriais(s);
+  normalizarFotosServico(s);
+  const dataStr = formatarData(s.data);
+  const inst = resumoInstrumento(s);
+  const statusLabel = formatarStatus(s.status || "entrada");
+  const total = Number(s.orcamento) || 0;
+  const desconto = Number(s.desconto) || 0;
+
+  let servicosRows = "";
+  if (s.servicos?.length) {
+    s.servicos.forEach(nome => {
+      const p = precoServicoCatalogo(nome);
+      servicosRows += `<tr><td>${escapeHtml(nome)}</td><td class="num">${p != null ? `R$ ${escapeHtml(fmtBRL(p))}` : "—"}</td></tr>`;
+    });
+  }
+
+  let extraRow = "";
+  if (s.extraNome && String(s.extraNome).trim()) {
+    extraRow = `<tr><td>Extra: ${escapeHtml(s.extraNome)}</td><td class="num">R$ ${escapeHtml(fmtBRL(Number(s.extraValor) || 0))}</td></tr>`;
+  }
+
+  let matRows = "";
+  const matItens = s.materiais.filter(m => m.desc || m.qtd * m.valorUnit > 0);
+  matItens.forEach(m => {
+    const sub = Math.round(m.qtd * m.valorUnit * 100) / 100;
+    matRows += `<tr><td>${escapeHtml(m.desc || "—")} (${m.qtd} un.)</td><td class="num">R$ ${escapeHtml(fmtBRL(sub))}</td></tr>`;
+  });
+
+  const problemaBlock =
+    s.problema && String(s.problema).trim()
+      ? `<p class="orc-problema"><strong>Pedido do cliente:</strong> ${escapeHtml(s.problema)}</p>`
+      : "";
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Orçamento ${escapeAttr(s.id)} — ${escapeAttr(s.cliente)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: "Segoe UI", system-ui, sans-serif; color: #1c1917; margin: 0; padding: 24px; background: #fafaf9; }
+    .sheet { max-width: 640px; margin: 0 auto; background: #fff; border: 1px solid #e7e5e4; border-radius: 12px; padding: 28px 32px; }
+    .brand { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #b45309; font-weight: 700; margin: 0 0 4px; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    .meta { font-size: 13px; color: #78716c; margin-bottom: 20px; line-height: 1.5; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 16px 0; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid #e7e5e4; text-align: left; }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #78716c; }
+    td.num { text-align: right; font-weight: 600; white-space: nowrap; }
+    .total-box { margin-top: 20px; padding: 16px; background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 1px solid #fed7aa; border-radius: 10px; text-align: right; }
+    .total-label { font-size: 12px; color: #92400e; text-transform: uppercase; letter-spacing: 0.08em; }
+    .total-val { font-size: 28px; font-weight: 700; color: #9a3412; }
+    .desconto { color: #b91c1c; font-size: 13px; margin-top: 6px; }
+    .orc-problema { font-size: 14px; line-height: 1.5; background: #fafaf9; padding: 12px; border-radius: 8px; border-left: 3px solid #ea580c; }
+    .foot { margin-top: 24px; font-size: 12px; color: #a8a29e; line-height: 1.5; }
+    .no-print { margin-top: 20px; text-align: center; }
+    .no-print button { background: #ea580c; color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; margin: 0 6px; }
+    .no-print button.secondary { background: #fff; color: #44403c; border: 1px solid #d6d3d1; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .sheet { border: none; box-shadow: none; max-width: none; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <p class="brand">Luthieria Baratieri</p>
+    <h1>Orçamento de serviço</h1>
+    <p class="meta">
+      <strong>OS ${escapeHtml(s.id)}</strong> · ${escapeHtml(dataStr)}<br>
+      Cliente: <strong>${escapeHtml(s.cliente)}</strong><br>
+      ${inst ? `Instrumento: ${escapeHtml(inst)}<br>` : ""}
+      Situação: ${escapeHtml(statusLabel)}
+    </p>
+    ${problemaBlock}
+    ${
+      servicosRows || extraRow || matRows
+        ? `<table>
+      <thead><tr><th>Descrição</th><th class="num">Valor</th></tr></thead>
+      <tbody>${servicosRows}${extraRow}${matRows}</tbody>
+    </table>`
+        : "<p>Nenhum item de serviço ou material registrado nesta OS.</p>"
+    }
+    ${desconto > 0 ? `<p class="desconto">Desconto: − R$ ${escapeHtml(fmtBRL(desconto))}</p>` : ""}
+    <div class="total-box">
+      <div class="total-label">Total</div>
+      <div class="total-val">${total > 0 ? `R$ ${escapeHtml(fmtBRL(total))}` : "A combinar"}</div>
+    </div>
+    <p class="foot">
+      Documento gerado pelo Painel OS Baratieri. Valores sujeitos a confirmação na oficina.<br>
+      Contato: baratieriluthieria@gmail.com · (45) 92002-8659
+    </p>
+    <div class="no-print">
+      <button type="button" onclick="window.print()">Imprimir / Salvar PDF</button>
+      <button type="button" class="secondary" onclick="window.close()">Fechar</button>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function abrirOrcamentoImprimivel(s) {
+  if (!s) return;
+  const html = htmlOrcamentoImprimivel(s);
+  const w = window.open("", "_blank", "noopener,noreferrer");
+  if (!w) {
+    showToast("Permita pop-ups para abrir o orçamento");
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
 }
 
 function abrirPagamento(id) {
@@ -2487,8 +2804,8 @@ document.getElementById("form").addEventListener("submit", async e => {
     materialSomarOrcamento: document.getElementById("material-somar-orcamento")?.checked !== false,
     pagamento: document.getElementById("pagamento").value,
     fotos: {
-      antes: fotosFormState.antes || "",
-      depois: fotosFormState.depois || ""
+      antes: [...(fotosFormState.antes || [])],
+      depois: [...(fotosFormState.depois || [])]
     }
   };
 
@@ -2575,7 +2892,9 @@ async function iniciarPainel() {
   await loadPecasInMemory();
   renderChecklist();
   wireMateriaisFormOnce();
+  wireFotosFormOnce();
   renderMateriaisForm([]);
+  renderGaleriasFotosForm();
 
   document.getElementById("kanban").addEventListener("click", onKanbanClick);
 
@@ -2622,46 +2941,7 @@ async function iniciarPainel() {
   document.getElementById("footer-help-sobre")?.addEventListener("click", abrirModalSobrePainelOS);
   document.getElementById("footer-help-manual")?.addEventListener("click", abrirModalManualPainelOS);
 
-  document.getElementById("fotoAntesBtn")?.addEventListener("click", () => {
-    document.getElementById("fotoAntesInput")?.click();
-  });
-  document.getElementById("fotoDepoisBtn")?.addEventListener("click", () => {
-    document.getElementById("fotoDepoisInput")?.click();
-  });
-  document.getElementById("fotoAntesRemover")?.addEventListener("click", () => {
-    fotosFormState.antes = "";
-    const el = document.getElementById("fotoAntesInput");
-    if (el) el.value = "";
-    atualizarPreviewFoto("antes");
-  });
-  document.getElementById("fotoDepoisRemover")?.addEventListener("click", () => {
-    fotosFormState.depois = "";
-    const el = document.getElementById("fotoDepoisInput");
-    if (el) el.value = "";
-    atualizarPreviewFoto("depois");
-  });
-  document.getElementById("fotoAntesInput")?.addEventListener("change", async e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      fotosFormState.antes = await processarFotoArquivo(file);
-      atualizarPreviewFoto("antes");
-      showToast("Foto de antes adicionada");
-    } catch {
-      showToast("Nao foi possivel processar a foto");
-    }
-  });
-  document.getElementById("fotoDepoisInput")?.addEventListener("change", async e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      fotosFormState.depois = await processarFotoArquivo(file);
-      atualizarPreviewFoto("depois");
-      showToast("Foto de depois adicionada");
-    } catch {
-      showToast("Nao foi possivel processar a foto");
-    }
-  });
+  wireFotosFormOnce();
 
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {

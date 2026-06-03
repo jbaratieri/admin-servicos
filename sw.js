@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v22";
+const CACHE_VERSION = "v23";
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const APP_SHELL_FILES = [
   "/",
