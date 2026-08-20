@@ -34,6 +34,7 @@ const SERVICOS_PADRAO = [
   { nome: "Limpeza e Hidratação da escala", preco: 80 },
   { nome: "Polimento e Nivelamento de trastes", preco: 150 },
   { nome: "Colagem e regulagem de cavalete", preco: 120 },
+  { nome: "Rebaixamento de cavalete", preco: 80 },
   { nome: "Ajuste Ação das cordas e oitavas", preco: 120 },
   { nome: "Troca de cordas", preco: 40 },
   { nome: "Ajuste de tensor", preco: 60 },
@@ -63,13 +64,16 @@ const PECAS_PADRAO = [
   { nome: "Cordas violão aço 010–046", preco: 0, unidade: "jogo" },
   { nome: "Cordas violão nylon", preco: 0, unidade: "jogo" },
   { nome: "Cordas baixo 4 cordas", preco: 0, unidade: "jogo" },
-  { nome: "Tarraxas (par)", preco: 0, unidade: "par" },
+  { nome: "Tarraxas (jogo)", preco: 0, unidade: "jogo" },
   { nome: "Pestana (nut) osso/sintético", preco: 0, unidade: "un" },
   { nome: "Rastilho (saddle)", preco: 0, unidade: "un" },
   { nome: "Cavalete", preco: 0, unidade: "un" },
   { nome: "Traste", preco: 0, unidade: "un" },
   { nome: "Tensor", preco: 0, unidade: "un" },
-  { nome: "Capotraste", preco: 0, unidade: "un" }
+  { nome: "Capotraste", preco: 0, unidade: "un" },
+  { nome: "Bateria 9V", preco: 0, unidade: "un" },
+  { nome: "Piezo", preco: 0, unidade: "un" },
+  { nome: "Jack", preco: 0, unidade: "un" }
 ];
 
 const IDB_NAME = "luthier-os-local-v1";
