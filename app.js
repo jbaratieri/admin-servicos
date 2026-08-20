@@ -29,19 +29,26 @@ const INSTR_TIPOS = [
 ];
 
 const SERVICOS_PADRAO = [
-  { nome: "Troca e ajuste rastilho", preco: 80 },
-  { nome: "Troca de pestana (nut)", preco: 80 },
-  { nome: "Limpeza e Hidratação da escala", preco: 80 },
-  { nome: "Polimento e Nivelamento de trastes", preco: 150 },
-  { nome: "Colagem e regulagem de cavalete", preco: 120 },
+  { nome: "Confecção de Rastilho em osso", preco: 70 },
+  { nome: "Confecção de Nut (Pestana) em osso", preco: 70 },
+  { nome: "Limpeza profunda e Hidratação da escala", preco: 80 },
+  { nome: "Retífica, nivelamento e polimento de trastes", preco: 180 },
+  { nome: "Troca completa de trastes", preco: 250 },
+  { nome: "Recolagem e regulagem de cavalete", preco: 120 },
+  { nome: "Confecção de cavalete e regulagem", preco: 180 },
   { nome: "Rebaixamento de cavalete", preco: 80 },
   { nome: "Ajuste Ação das cordas e oitavas", preco: 120 },
-  { nome: "Troca de cordas", preco: 40 },
+  { nome: "Troca de cordas + Limpeza e hidratação básica", preco: 60 },
   { nome: "Ajuste de tensor", preco: 60 },
   { nome: "Colagem de trinca", preco: 100 },
   { nome: "Colagem Braço/Headstock", preco: 200 },
   { nome: "Regulagem geral", preco: 150 },
   { nome: "Limpeza geral", preco: 50 },
+  { nome: "Troca de Jack P10 ou redone de fiação", preco: 60 },
+  { nome: "Instalação de captador Piezo / Rastilho elétrico", preco: 80 },
+  { nome: "Instalação de sistema de Pré-amplificador (Corte no instrumento)", preco:150 },
+  { nome: "Troca de tarraxas (jogo completo)", preco: 60 },
+  { nome: "Instalação de roldana para correia", preco: 50 },
   {
     nome: "Manutenção - Pacote Básico",
     preco: 120,
@@ -61,8 +68,10 @@ const SERVICOS_PADRAO = [
 
 /** Catálogo local de peças/materiais (preço unitário sugerido na OS). */
 const PECAS_PADRAO = [
-  { nome: "Cordas violão aço 010–046", preco: 0, unidade: "jogo" },
+  { nome: "Cordas violão aço", preco: 0, unidade: "jogo" },
   { nome: "Cordas violão nylon", preco: 0, unidade: "jogo" },
+  { nome: "Cordas viola caipira", preco: 0, unidade: "jogo" },
+  { nome: "Cordas cavaquinho", preco: 0, unidade: "jogo" },
   { nome: "Cordas baixo 4 cordas", preco: 0, unidade: "jogo" },
   { nome: "Tarraxas (jogo)", preco: 0, unidade: "jogo" },
   { nome: "Pestana (nut) osso/sintético", preco: 0, unidade: "un" },
@@ -72,8 +81,9 @@ const PECAS_PADRAO = [
   { nome: "Tensor", preco: 0, unidade: "un" },
   { nome: "Capotraste", preco: 0, unidade: "un" },
   { nome: "Bateria 9V", preco: 0, unidade: "un" },
-  { nome: "Piezo", preco: 0, unidade: "un" },
-  { nome: "Jack", preco: 0, unidade: "un" }
+  { nome: "captador Piezo", preco: 0, unidade: "un" },
+  { nome: "Jack P10", preco: 0, unidade: "un" },
+  { nome: "Pré-amplificador", preco: 0, unidade: "un" }
 ];
 
 const IDB_NAME = "luthier-os-local-v1";
