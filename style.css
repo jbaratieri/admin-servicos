@@ -2069,6 +2069,10 @@ button[type="submit"] {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s, transform 0.25s;
+  max-width: min(92vw, 420px);
+  text-align: center;
+  line-height: 1.35;
+  white-space: normal;
 }
 
 .toast.is-visible {

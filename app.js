@@ -103,7 +103,7 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
-const APP_VERSION = "3.0.0";
+const APP_VERSION = "3.0.1";
 const MAX_FOTOS_POR_LADO = 12;
 
 let storageHintUserDismissed = false;
@@ -291,7 +291,11 @@ function tentarToastLembreteBackup() {
   try {
     localStorage.setItem(LS_LAST_BACKUP_TOAST_AT, String(now));
   } catch {}
-  showToast("Lembrete: faça backup JSON de vez em quando — os dados ficam só neste aparelho.");
+  if (!lastExport) {
+    showToast("Ainda não tem uma cópia fora do app. Use Salvar cópia.", 4200);
+  } else {
+    showToast("Faz alguns dias sem cópia de segurança. Use Salvar cópia.", 4200);
+  }
 }
 
 function agendarLembreteBackupAposCarregar() {
@@ -304,8 +308,8 @@ function atualizarIndicadorArmazenamento() {
   if (!el) return;
   const n = servicos.length;
   el.textContent = n === 0
-    ? "Dados só neste aparelho. Use backup JSON antes de trocar de celular ou limpar o navegador."
-    : `${n} OS salvas neste aparelho · faça backup com frequência.`;
+    ? "Dados só neste aparelho. Use Salvar cópia antes de trocar de celular ou limpar o navegador."
+    : `${n} OS salvas neste aparelho · guarde uma cópia com frequência.`;
 
   if (storageHintUserDismissed) return;
 
@@ -738,7 +742,7 @@ function abrirModalSobrePainelOS() {
     bodyHTML: `
       <div class="modal-prose">
         <p>O <strong>Painel OS Baratieri</strong> organiza <strong>ordens de serviço</strong> em colunas, do recebimento do instrumento até a entrega.</p>
-        <p>Os registros ficam <strong>só neste aparelho</strong> (navegador). Use <strong>Backup JSON</strong> com frequência para não perder o histórico de OS, <strong>clientes salvos</strong> e tabela de preços.</p>
+        <p>Os registros ficam <strong>só neste aparelho</strong> (navegador). Use <strong>Salvar cópia</strong> com frequência para não perder o histórico de OS, <strong>clientes salvos</strong> e tabela de preços.</p>
         <p>Complemento ao ecossistema <strong>Método Baratieri</strong> / Luthieria Baratieri.</p>
       </div>`,
     footerButtons: modalApenasFechar()
@@ -764,7 +768,7 @@ function abrirModalManualPainelOS() {
           <li><strong>Orçamento:</strong> no card, <strong>📄</strong> abre o orçamento para imprimir ou salvar como PDF; <strong>📲</strong> envia mensagem completa no WhatsApp.</li>
           <li><strong>Instrumento:</strong> escolha o <strong>tipo</strong>, marca/modelo, ano e série; use <strong>Complemento</strong> para detalhes livres. OS antigas só com texto continuam no resumo do card.</li>
           <li><strong>CSV:</strong> exporte uma <strong>planilha</strong> das OS (valores e recebimentos); opcional incluir arquivadas.</li>
-          <li><strong>Backup / importar:</strong> exporte JSON com regularidade. Importar substitui os dados locais — use só se souber o que está fazendo.</li>
+          <li><strong>Salvar cópia / Restaurar:</strong> toque em <strong>Salvar cópia</strong> com regularidade e guarde o arquivo no Drive, WhatsApp ou pendrive. <strong>Restaurar</strong> substitui os dados deste aparelho — use só se souber o que está fazendo.</li>
           <li><strong>Histórico:</strong> OS arquivadas ficam em <strong>Histórico</strong>.</li>
         </ol>
       </div>`,
@@ -1002,12 +1006,12 @@ function abrirEditorPecas() {
 }
 
 /* ========== toast ========== */
-function showToast(msg) {
+function showToast(msg, durationMs) {
   const el = document.getElementById("toast");
   el.textContent = msg;
   el.classList.add("is-visible");
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => el.classList.remove("is-visible"), 2600);
+  showToast._t = setTimeout(() => el.classList.remove("is-visible"), durationMs || 2600);
 }
 
 function preencherVersaoRodape() {
@@ -2630,7 +2634,77 @@ function baixarCsvOs(incluirArquivadas) {
   showToast(rows.length ? `${rows.length} OS no CSV` : "CSV só com cabeçalho (nenhuma OS)");
 }
 
-function exportarBackup() {
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function localStampCopia() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}-${pad2(d.getHours())}h${pad2(d.getMinutes())}`;
+}
+
+function nomeArquivoCopia() {
+  return `Painel-OS-Baratieri-${localStampCopia()}.json`;
+}
+
+function preferirCompartilharNativo() {
+  try {
+    if (!navigator.share) return false;
+    const ua = navigator.userAgent || "";
+    if (/Android|iPhone|iPad|iPod/i.test(ua)) return true;
+    if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return true;
+    if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) return true;
+  } catch {}
+  return false;
+}
+
+function baixarBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+function persistirArmazenamentoSilencioso() {
+  try {
+    if (navigator.storage && typeof navigator.storage.persist === "function") {
+      navigator.storage.persist();
+    }
+  } catch {}
+}
+
+async function entregarCopia(payload, filename) {
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+  if (preferirCompartilharNativo() && typeof File === "function") {
+    const candidates = [
+      { type: "application/json", data: blob },
+      { type: "text/plain", data: new Blob([json], { type: "text/plain" }) }
+    ];
+    for (const c of candidates) {
+      try {
+        const file = new File([c.data], filename, { type: c.type });
+        if (navigator.canShare && !navigator.canShare({ files: [file] })) continue;
+        await navigator.share({
+          files: [file],
+          title: "Cópia de segurança",
+          text: "Cópia do Painel OS Baratieri — guarde em local seguro."
+        });
+        return "shared";
+      } catch (e) {
+        if (e && e.name === "AbortError") return "cancelled";
+      }
+    }
+  }
+  baixarBlob(blob, filename);
+  return "downloaded";
+}
+
+async function salvarCopia() {
   const payload = {
     v: 1,
     exportedAt: new Date().toISOString(),
@@ -2639,15 +2713,18 @@ function exportarBackup() {
     pecas: pecasAtual,
     clientes
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
-  const a = document.createElement("a");
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-  a.href = URL.createObjectURL(blob);
-  a.download = `backup-os-local-luthieria-${stamp}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  const outcome = await entregarCopia(payload, nomeArquivoCopia());
+  if (outcome === "cancelled") {
+    showToast("Cópia cancelada.");
+    return;
+  }
   marcarBackupExportado();
-  showToast("Backup baixado (OS + clientes + preços + peças)");
+  persistirArmazenamentoSilencioso();
+  if (outcome === "shared") {
+    showToast("Cópia pronta. Escolha Drive, WhatsApp ou Arquivos para guardar.", 5200);
+    return;
+  }
+  showToast("Cópia salva. Guarde esse arquivo no Drive, WhatsApp ou pendrive.", 5200);
 }
 
 function onImportFileChange(e) {
@@ -2662,7 +2739,7 @@ function onImportFileChange(e) {
       const pacote = !legacyArray && data && typeof data === "object" && data.v === 1 && Array.isArray(data.servicos);
 
       if (!legacyArray && !pacote) {
-        showToast("Arquivo inválido: use um backup deste app (JSON)");
+        showToast("Arquivo inválido: use uma cópia salva neste app");
         return;
       }
 
@@ -2672,13 +2749,13 @@ function onImportFileChange(e) {
       const temClientes = pacote && Array.isArray(data.clientes) && data.clientes.length;
 
       abrirModal({
-        title: "Restaurar backup",
+        title: "Restaurar cópia",
         bodyHTML: `
           <p>O arquivo contém <strong>${nOs}</strong> ordem(ns) de serviço.</p>
           ${temCatalogo ? "<p>Também há uma <strong>tabela de preços</strong> no arquivo.</p>" : ""}
           ${temPecas ? `<p>Também há <strong>catálogo de peças</strong> (${data.pecas.length} item(ns)).</p>` : ""}
           ${temClientes ? "<p>Também há <strong>clientes salvos</strong> para sugestão no formulário.</p>" : ""}
-          <p class="modal-hint">Isso <strong>substitui</strong> os dados neste aparelho. Faça um backup atual antes, se precisar.</p>`,
+          <p class="modal-hint">Isso <strong>substitui</strong> as OS, clientes, preços e peças deste aparelho. Salve uma cópia atual antes, se precisar.</p>`,
         footerButtons: [
           { label: "Cancelar", onClick: () => fecharModal() },
           {
@@ -2717,16 +2794,16 @@ function onImportFileChange(e) {
               renderChecklist();
               try {
                 await save();
-                showToast("Backup restaurado");
+                showToast("Cópia restaurada");
               } catch (err) {
-                showToast("Erro ao gravar após importar");
+                showToast("Erro ao gravar após restaurar");
               }
             }
           }
         ]
       });
     } catch (err) {
-      showToast("JSON inválido ou arquivo corrompido");
+      showToast("Arquivo inválido ou corrompido");
     }
   };
   reader.readAsText(f, "UTF-8");
@@ -2939,7 +3016,7 @@ async function iniciarPainel() {
     }
   });
 
-  document.getElementById("btn-backup").addEventListener("click", exportarBackup);
+  document.getElementById("btn-backup").addEventListener("click", salvarCopia);
   document.getElementById("btn-export-csv")?.addEventListener("click", abrirModalExportarCsv);
   document.getElementById("btn-catalogo")?.addEventListener("click", abrirEditorCatalogo);
   document.getElementById("btn-pecas")?.addEventListener("click", abrirEditorPecas);
