@@ -1965,6 +1965,57 @@ button[type="submit"] {
   margin-bottom: 6px;
 }
 
+.catalog-familia-wrap {
+  flex: 1;
+  min-width: 140px;
+}
+
+.catalog-familia-wrap label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.catalog-familia-wrap select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font: inherit;
+}
+
+.checklist-filtro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.checklist-filtro-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.35;
+  flex: 1 1 180px;
+}
+
+.checklist-filtro-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  min-height: 40px;
+}
+
 .catalog-row-tools .btn-cat-remove {
   flex-shrink: 0;
   padding: 10px 12px;

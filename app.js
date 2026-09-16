@@ -19,6 +19,8 @@ const INSTR_TIPOS = [
   "Violão 6 cordas",
   "Violão 7+ cordas",
   "Violão clássico / nylon",
+  "Guitarra 6 cordas",
+  "Guitarra 7+ cordas",
   "Baixo 4 cordas",
   "Baixo 5 ou 6 cordas",
   "Ukulele",
@@ -28,44 +30,68 @@ const INSTR_TIPOS = [
   "Outro"
 ];
 
+/** familia: comum (todos) | acustico | eletrico — uma tabela só; a checklist prioriza. */
 const SERVICOS_PADRAO = [
-  { nome: "Confecção de Rastilho em osso", preco: 70 },
-  { nome: "Confecção de Nut (Pestana) em osso", preco: 70 },
-  { nome: "Limpeza profunda e Hidratação da escala", preco: 80 },
-  { nome: "Retífica, nivelamento e polimento de trastes", preco: 180 },
-  { nome: "Troca completa de trastes", preco: 250 },
-  { nome: "Retrastamento parcial - por traste", preco: 10 },
-  { nome: "Recolagem e regulagem de cavalete", preco: 120 },
-  { nome: "Confecção de cavalete e regulagem", preco: 180 },
-  { nome: "Rebaixamento de cavalete", preco: 80 },
-  { nome: "Ajuste Ação das cordas e oitavas", preco: 120 },
-  { nome: "Troca de cordas + Limpeza e hidratação básica", preco: 60 },
-  { nome: "Ajuste de tensor", preco: 60 },
-  { nome: "Colagem de trinca", preco: 100 },
-  { nome: "Colagem Braço/Headstock", preco: 200 },
-  { nome: "Regulagem geral", preco: 150 },
-  { nome: "Limpeza geral", preco: 50 },
-  { nome: "Troca de Jack P10 ou redone de fiação", preco: 60 },
-  { nome: "Instalação de captador Piezo / Rastilho elétrico", preco: 80 },
-  { nome: "Instalação de sistema de Pré-amplificador (Corte no instrumento)", preco:150 },
-  { nome: "Troca de tarraxas (jogo completo)", preco: 60 },
-  { nome: "Instalação de roldana para correia", preco: 50 },
-  { nome: "Revisão elétrica guitarras/baixos", preco: 100 },  
-  { nome: "Limpeza chaves e potenciômetros", preco: 50 },
+  { nome: "Diagnóstico / avaliação", preco: 50, familia: "comum" },
+  { nome: "Confecção de Rastilho em osso", preco: 70, familia: "comum" },
+  { nome: "Confecção de Nut (Pestana) em osso", preco: 70, familia: "comum" },
+  { nome: "Compensação de rastilho", preco: 50, familia: "acustico" },
+  { nome: "Limpeza profunda e Hidratação da escala", preco: 80, familia: "acustico" },
+  { nome: "Retífica, nivelamento e polimento de trastes", preco: 180, familia: "comum" },
+  { nome: "Troca completa de trastes", preco: 250, familia: "comum" },
+  { nome: "Retrastamento parcial - por traste", preco: 10, familia: "comum" },
+  { nome: "Recolagem e regulagem de cavalete", preco: 120, familia: "acustico" },
+  { nome: "Confecção de cavalete e regulagem", preco: 180, familia: "acustico" },
+  { nome: "Rebaixamento de cavalete", preco: 80, familia: "acustico" },
+  { nome: "Ajuste Ação das cordas e oitavas", preco: 120, familia: "comum" },
+  { nome: "Ajuste de ponte / tremolo", preco: 80, familia: "eletrico" },
+  { nome: "Troca de cordas + Limpeza e hidratação básica", preco: 60, familia: "comum" },
+  { nome: "Ajuste de tensor", preco: 60, familia: "comum" },
+  { nome: "Colagem de trinca", preco: 100, familia: "comum" },
+  { nome: "Colagem Braço/Headstock", preco: 200, familia: "comum" },
+  { nome: "Retoque de acabamento", preco: 80, familia: "comum" },
+  { nome: "Regulagem geral", preco: 150, familia: "comum" },
+  { nome: "Limpeza geral", preco: 50, familia: "comum" },
+  { nome: "Troca de Jack P10 ou redone de fiação", preco: 60, familia: "eletrico" },
+  { nome: "Instalação de captador Piezo / Rastilho elétrico", preco: 80, familia: "acustico" },
+  { nome: "Troca de captador (magnético)", preco: 80, familia: "eletrico" },
+  { nome: "Altura de captadores", preco: 40, familia: "eletrico" },
+  { nome: "Troca de chave seletora", preco: 60, familia: "eletrico" },
+  { nome: "Blindagem / malha (ruído)", preco: 80, familia: "eletrico" },
+  { nome: "Instalação de sistema de Pré-amplificador (Corte no instrumento)", preco: 150, familia: "acustico" },
+  { nome: "Troca de tarraxas (jogo completo)", preco: 60, familia: "comum" },
+  { nome: "Instalação de roldana para correia", preco: 50, familia: "comum" },
+  { nome: "Revisão elétrica guitarras/baixos", preco: 100, familia: "eletrico" },
+  { nome: "Limpeza chaves e potenciômetros", preco: 50, familia: "eletrico" },
   {
     nome: "Manutenção - Pacote Básico",
     preco: 120,
+    familia: "comum",
     desc: "Troca de cordas • Regulagem básica • Limpeza geral"
   },
   {
     nome: "Manutenção - Pacote Completo",
     preco: 220,
+    familia: "acustico",
     desc: "Setup completo • Hidratação • Polimento leve • Troca de cordas"
   },
   {
     nome: "Manutenção - Pacote Premium",
     preco: 320,
+    familia: "acustico",
     desc: "Setup avançado • Nivelamento trastes • Ajuste rastilho • Correções leves"
+  },
+  {
+    nome: "Setup acústico",
+    preco: 220,
+    familia: "acustico",
+    desc: "Cordas • Tensor • Ação e oitavas • Limpeza e hidratação"
+  },
+  {
+    nome: "Setup elétrico",
+    preco: 180,
+    familia: "eletrico",
+    desc: "Cordas • Tensor • Ação e oitavas • Altura de captadores • Intonação"
   },
 ];
 
@@ -73,9 +99,11 @@ const SERVICOS_PADRAO = [
 const PECAS_PADRAO = [
   { nome: "Cordas violão aço", preco: 0, unidade: "jogo" },
   { nome: "Cordas violão nylon", preco: 0, unidade: "jogo" },
+  { nome: "Cordas guitarra", preco: 0, unidade: "jogo" },
   { nome: "Cordas viola caipira", preco: 0, unidade: "jogo" },
   { nome: "Cordas cavaquinho", preco: 0, unidade: "jogo" },
   { nome: "Cordas baixo 4 cordas", preco: 0, unidade: "jogo" },
+  { nome: "Cordas baixo 5 ou 6 cordas", preco: 0, unidade: "jogo" },
   { nome: "Tarraxas (jogo)", preco: 0, unidade: "jogo" },
   { nome: "Pestana (nut) osso/sintético", preco: 0, unidade: "un" },
   { nome: "Rastilho (saddle)", preco: 0, unidade: "un" },
@@ -85,7 +113,14 @@ const PECAS_PADRAO = [
   { nome: "Capotraste", preco: 0, unidade: "un" },
   { nome: "Bateria 9V", preco: 0, unidade: "un" },
   { nome: "captador Piezo", preco: 0, unidade: "un" },
+  { nome: "Captador single", preco: 0, unidade: "un" },
+  { nome: "Captador humbucker", preco: 0, unidade: "un" },
+  { nome: "Chave seletora 3/5 vias", preco: 0, unidade: "un" },
+  { nome: "Potenciômetro", preco: 0, unidade: "un" },
+  { nome: "Knobs", preco: 0, unidade: "un" },
   { nome: "Jack P10", preco: 0, unidade: "un" },
+  { nome: "Jack plate", preco: 0, unidade: "un" },
+  { nome: "Roldana / strap pin", preco: 0, unidade: "un" },
   { nome: "Pré-amplificador", preco: 0, unidade: "un" }
 ];
 
@@ -106,7 +141,7 @@ const STORAGE_HINT_AUTO_HIDE_MS = 22000;
 const BACKUP_TOAST_MIN_INTERVAL_MS = 1000 * 60 * 60 * 24 * 2;
 const BACKUP_CONSIDER_STALE_MS = 1000 * 60 * 60 * 24 * 3;
 const BACKUP_TOAST_AFTER_LOAD_MS = STORAGE_HINT_AUTO_HIDE_MS + 4000;
-const APP_VERSION = "3.0.1";
+const APP_VERSION = "3.1.0";
 const MAX_FOTOS_POR_LADO = 12;
 
 let storageHintUserDismissed = false;
@@ -168,44 +203,86 @@ function lsWrite(payload) {
 
 let catalogoAtual = [];
 
+function normalizarFamilia(f) {
+  const v = String(f || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  if (v === "acustico") return "acustico";
+  if (v === "eletrico") return "eletrico";
+  return "comum";
+}
+
+function familiaDoPadrao(nome) {
+  const key = String(nome || "").trim().toLowerCase();
+  const p = SERVICOS_PADRAO.find(s => s.nome.toLowerCase() === key);
+  return normalizarFamilia(p?.familia);
+}
+
 function catalogoPadrao() {
   return SERVICOS_PADRAO.map(s => ({
     nome: s.nome,
     preco: Number(s.preco) || 0,
+    familia: normalizarFamilia(s.familia),
     ...(s.desc ? { desc: s.desc } : {})
   }));
 }
 
 function normalizarCatalogo(arr) {
   const out = (Array.isArray(arr) ? arr : [])
-    .map(item => ({
-      nome: String(item?.nome ?? "").trim(),
-      preco: Math.max(0, Number(item?.preco) || 0),
-      ...((item?.desc && String(item.desc).trim()) ? { desc: String(item.desc).trim() } : {})
-    }))
+    .map(item => {
+      const nome = String(item?.nome ?? "").trim();
+      const familia = item?.familia
+        ? normalizarFamilia(item.familia)
+        : familiaDoPadrao(nome);
+      return {
+        nome,
+        preco: Math.max(0, Number(item?.preco) || 0),
+        familia,
+        ...((item?.desc && String(item.desc).trim()) ? { desc: String(item.desc).trim() } : {})
+      };
+    })
     .filter(x => x.nome);
   return out.length ? out : catalogoPadrao();
 }
 
+function mesclarFaltantesDoPadrao(salvo, padrao) {
+  const nomes = new Set(
+    salvo.map(s => String(s.nome || "").trim().toLowerCase()).filter(Boolean)
+  );
+  const extra = padrao.filter(s => !nomes.has(String(s.nome).trim().toLowerCase()));
+  return extra.length ? salvo.concat(extra) : salvo;
+}
+
 async function loadCatalogoInMemory() {
+  let origem = null;
   try {
     const c = await idbGet(IDB_KEY_CATALOGO);
-    if (Array.isArray(c) && c.length) {
-      catalogoAtual = normalizarCatalogo(c);
-      return;
-    }
+    if (Array.isArray(c) && c.length) origem = c;
   } catch {}
-  try {
-    const t = localStorage.getItem(LS_CATALOGO_KEY);
-    if (t) {
-      const c = JSON.parse(t);
-      if (Array.isArray(c) && c.length) {
-        catalogoAtual = normalizarCatalogo(c);
-        return;
+  if (!origem) {
+    try {
+      const t = localStorage.getItem(LS_CATALOGO_KEY);
+      if (t) {
+        const c = JSON.parse(t);
+        if (Array.isArray(c) && c.length) origem = c;
       }
-    }
-  } catch {}
-  catalogoAtual = catalogoPadrao();
+    } catch {}
+  }
+
+  const padrao = catalogoPadrao();
+  if (!origem) {
+    catalogoAtual = padrao;
+    return;
+  }
+
+  const tinhaFamilia = origem.every(x => x && x.familia);
+  const normalizado = normalizarCatalogo(origem);
+  catalogoAtual = mesclarFaltantesDoPadrao(normalizado, padrao);
+  if (catalogoAtual.length !== normalizado.length || !tinhaFamilia) {
+    try { await saveCatalogo(); } catch {}
+  }
 }
 
 async function saveCatalogo() {
@@ -237,24 +314,30 @@ function normalizarPecas(arr) {
 }
 
 async function loadPecasInMemory() {
+  let origem = null;
   try {
     const p = await idbGet(IDB_KEY_PECAS);
-    if (Array.isArray(p)) {
-      pecasAtual = normalizarPecas(p);
-      return;
-    }
+    if (Array.isArray(p) && p.length) origem = p;
   } catch {}
-  try {
-    const t = localStorage.getItem(LS_PECAS_KEY);
-    if (t) {
-      const p = JSON.parse(t);
-      if (Array.isArray(p)) {
-        pecasAtual = normalizarPecas(p);
-        return;
+  if (!origem) {
+    try {
+      const t = localStorage.getItem(LS_PECAS_KEY);
+      if (t) {
+        const p = JSON.parse(t);
+        if (Array.isArray(p) && p.length) origem = p;
       }
-    }
-  } catch {}
-  pecasAtual = pecasPadrao();
+    } catch {}
+  }
+  const padrao = pecasPadrao();
+  if (!origem) {
+    pecasAtual = padrao;
+    return;
+  }
+  const normalizado = normalizarPecas(origem);
+  pecasAtual = mesclarFaltantesDoPadrao(normalizado, padrao);
+  if (pecasAtual.length !== normalizado.length) {
+    try { await savePecas(); } catch {}
+  }
 }
 
 async function savePecas() {
@@ -332,6 +415,7 @@ let servicos = [];
 let clientes = [];
 let currentStatusIndex = 0;
 let valorManual = false;
+let checklistVerTodos = false;
 let filtroBusca = "";
 let fotosFormState = { antes: [], depois: [] };
 
@@ -769,7 +853,7 @@ function abrirModalManualPainelOS() {
           <li><strong>Material:</strong> linhas com item, quantidade e valor unitário; marque <strong>Somar material no total</strong> para entrar no orçamento automático (desmarque só para anotar peças sem alterar o total).</li>
           <li><strong>Fotos:</strong> em cada OS você pode adicionar <strong>várias fotos</strong> em Antes e Depois (até ${MAX_FOTOS_POR_LADO} por etapa).</li>
           <li><strong>Orçamento:</strong> no card, <strong>📄</strong> abre o orçamento para imprimir ou salvar como PDF; <strong>📲</strong> envia mensagem completa no WhatsApp.</li>
-          <li><strong>Instrumento:</strong> escolha o <strong>tipo</strong>, marca/modelo, ano e série; use <strong>Complemento</strong> para detalhes livres. OS antigas só com texto continuam no resumo do card.</li>
+          <li><strong>Instrumento:</strong> escolha o <strong>tipo</strong> (violão, guitarra, baixo, viola, cavaquinho…). A checklist prioriza serviços comuns + acústicos ou elétricos; use <strong>Ver todos</strong> se precisar. Marca/modelo, ano e série; <strong>Complemento</strong> para detalhes livres.</li>
           <li><strong>CSV:</strong> exporte uma <strong>planilha</strong> das OS (valores e recebimentos); opcional incluir arquivadas.</li>
           <li><strong>Salvar cópia / Restaurar:</strong> toque em <strong>Salvar cópia</strong> com regularidade e guarde o arquivo no Drive, WhatsApp ou pendrive. <strong>Restaurar</strong> substitui os dados deste aparelho — use só se souber o que está fazendo.</li>
           <li><strong>Histórico:</strong> OS arquivadas ficam em <strong>Histórico</strong>.</li>
@@ -817,6 +901,7 @@ function lerCamposModalPagamento() {
 }
 
 function htmlCatalogRow(s) {
+  const fam = normalizarFamilia(s.familia);
   return `
     <div class="catalog-row">
       <div class="modal-field">
@@ -827,6 +912,14 @@ function htmlCatalogRow(s) {
         <div class="catalog-preco-wrap">
           <label>Preço (R$)</label>
           <input type="number" class="cat-preco" min="0" step="1" value="${escapeAttr(String(s.preco ?? 0))}">
+        </div>
+        <div class="catalog-familia-wrap">
+          <label>Na OS</label>
+          <select class="cat-familia" aria-label="Família do serviço">
+            <option value="comum"${fam === "comum" ? " selected" : ""}>Comum</option>
+            <option value="acustico"${fam === "acustico" ? " selected" : ""}>Acústico</option>
+            <option value="eletrico"${fam === "eletrico" ? " selected" : ""}>Elétrico</option>
+          </select>
         </div>
         <button type="button" class="btn-cat-remove">Remover</button>
       </div>
@@ -845,8 +938,9 @@ function lerCatalogoDoModal() {
     const nome = (row.querySelector(".cat-nome")?.value || "").trim();
     const preco = Number(row.querySelector(".cat-preco")?.value) || 0;
     const desc = (row.querySelector(".cat-desc")?.value || "").trim();
+    const familia = normalizarFamilia(row.querySelector(".cat-familia")?.value);
     if (!nome) return;
-    out.push({ nome, preco, ...(desc ? { desc } : {}) });
+    out.push({ nome, preco, familia, ...(desc ? { desc } : {}) });
   });
   return out;
 }
@@ -878,7 +972,7 @@ function abrirEditorCatalogo() {
   abrirModal({
     title: "Tabela de serviços e preços",
     bodyHTML: `
-      <p class="modal-hint">Edite valores, inclua linhas ou remova serviços que você não usa. Isso afeta a checklist e o cálculo automático do orçamento. OS já salvas continuam com os nomes gravados na época.</p>
+      <p class="modal-hint">Edite valores, inclua linhas ou remova serviços que você não usa. <strong>Comum</strong> aparece em todo instrumento; <strong>Acústico</strong> e <strong>Elétrico</strong> a checklist prioriza conforme o tipo. OS já salvas continuam com os nomes gravados na época.</p>
       <div id="catalog-rows">${rowsHtml}</div>
       <button type="button" class="btn-modal-secondary catalog-add-btn" id="catalog-add" style="width:100%;margin-top:10px">＋ Incluir serviço</button>`,
     footerButtons: [
@@ -920,7 +1014,7 @@ function abrirEditorCatalogo() {
   document.getElementById("catalog-add").onclick = () => {
     document.getElementById("catalog-rows").insertAdjacentHTML(
       "beforeend",
-      '<hr class="catalog-sep">' + htmlCatalogRow({ nome: "", preco: 0, desc: "" })
+      '<hr class="catalog-sep">' + htmlCatalogRow({ nome: "", preco: 0, desc: "", familia: "comum" })
     );
   };
 }
@@ -1072,9 +1166,54 @@ function monitorarAtualizacaoServiceWorker() {
 }
 
 /* ========== checklist ========== */
-function renderChecklist() {
+function familiasSugeridasParaTipo(tipo) {
+  const t = String(tipo || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  if (!t) return null;
+  if (t.startsWith("guitarra") || t.startsWith("baixo")) return ["comum", "eletrico"];
+  if (
+    t.startsWith("violao") ||
+    t.startsWith("viola") ||
+    t.startsWith("cavaquinho") ||
+    t.startsWith("ukulele")
+  ) {
+    return ["comum", "acustico"];
+  }
+  return null;
+}
+
+function nomesChecklistMarcados() {
+  return Array.from(document.querySelectorAll("#checklist-servicos input.check-input:checked"))
+    .map(i => i.value);
+}
+
+function catalogoVisivelNaOs(marcados) {
+  const keep = new Set(marcados || []);
+  if (checklistVerTodos) return catalogoAtual;
+  const familias = familiasSugeridasParaTipo(document.getElementById("instrTipo")?.value);
+  if (!familias) return catalogoAtual;
+  return catalogoAtual.filter(
+    s => familias.includes(normalizarFamilia(s.familia)) || keep.has(s.nome)
+  );
+}
+
+function rotuloFiltroChecklist(familias) {
+  if (!familias) return "";
+  if (familias.includes("eletrico")) return "Mostrando comuns e elétricos deste instrumento.";
+  return "Mostrando comuns e acústicos deste instrumento.";
+}
+
+function renderChecklist(marcados) {
   const container = document.getElementById("checklist-servicos");
-  const linhas = catalogoAtual.map(s => `
+  if (!container) return;
+  const keep = Array.isArray(marcados) ? marcados : nomesChecklistMarcados();
+  const familias = familiasSugeridasParaTipo(document.getElementById("instrTipo")?.value);
+  const filtrando = Boolean(familias) && !checklistVerTodos;
+  const visivel = catalogoVisivelNaOs(keep);
+  const linhas = visivel.map(s => `
   <label class="check-item">
     <span class="check-main">
       <input type="checkbox" value="${escapeAttr(s.nome)}" class="check-input">
@@ -1088,7 +1227,15 @@ function renderChecklist() {
   </label>
 `).join("");
 
+  const barra = familias
+    ? `<div class="checklist-filtro">
+        <p class="checklist-filtro-hint">${filtrando ? rotuloFiltroChecklist(familias) : "Todos os serviços da tabela."}</p>
+        <button type="button" class="checklist-filtro-btn" id="checklist-filtro-toggle">${checklistVerTodos ? "Só deste instrumento" : "Ver todos"}</button>
+      </div>`
+    : "";
+
   container.innerHTML = `
+    ${barra}
     <div class="checklist-table" role="group" aria-label="Tabela de serviços e preços">
       <div class="checklist-head">
         <span class="checklist-h-serv">Serviço</span>
@@ -1103,6 +1250,12 @@ function renderChecklist() {
   container.querySelectorAll("input.check-input").forEach(input => {
     input.addEventListener("change", calcularTotalChecklist);
   });
+  document.getElementById("checklist-filtro-toggle")?.addEventListener("click", () => {
+    checklistVerTodos = !checklistVerTodos;
+    renderChecklist(keep);
+    calcularTotalChecklist();
+  });
+  preencherChecklistSelecionado(keep);
 }
 
 function htmlMateriaisRow(m = {}) {
@@ -2771,11 +2924,17 @@ function onImportFileChange(e) {
                 servicos.forEach(normalizarInstrumento);
                 servicos.forEach(normalizarMateriais);
                 if (temCatalogo) {
-                  catalogoAtual = normalizarCatalogo(data.catalogo);
+                  catalogoAtual = mesclarFaltantesDoPadrao(
+                    normalizarCatalogo(data.catalogo),
+                    catalogoPadrao()
+                  );
                   await saveCatalogo();
                 }
                 if (temPecas) {
-                  pecasAtual = normalizarPecas(data.pecas);
+                  pecasAtual = mesclarFaltantesDoPadrao(
+                    normalizarPecas(data.pecas),
+                    pecasPadrao()
+                  );
                   await savePecas();
                 }
                 if (Array.isArray(data.clientes) && data.clientes.length) {
@@ -2848,7 +3007,8 @@ function editar(id) {
   document.getElementById("desconto").value = s.desconto ?? "";
   carregarFotosNoForm(s.fotos);
 
-  preencherChecklistSelecionado(s.servicos);
+  checklistVerTodos = false;
+  renderChecklist(s.servicos);
   renderMateriaisForm(s.materiais);
   const chkMat = document.getElementById("material-somar-orcamento");
   if (chkMat) chkMat.checked = s.materialSomarOrcamento !== false;
@@ -2940,7 +3100,8 @@ document.getElementById("form").addEventListener("submit", async e => {
 
   e.target.reset();
   resetFotosForm();
-  renderChecklist();
+  checklistVerTodos = false;
+  renderChecklist([]);
   renderMateriaisForm([]);
   fecharForm();
   document.getElementById("form-title").textContent = "Nova ordem de serviço";
@@ -2979,6 +3140,10 @@ async function iniciarPainel() {
   window.__osPainelIniciado = true;
 
   popularSelectInstrumentoTipos();
+  document.getElementById("instrTipo")?.addEventListener("change", () => {
+    renderChecklist();
+    calcularTotalChecklist();
+  });
 
   document.getElementById("modal-body").addEventListener("click", onCatalogRowRemoveClick);
 
@@ -3000,7 +3165,8 @@ async function iniciarPainel() {
     document.getElementById("form").reset();
     resetFotosForm();
     document.getElementById("form-title").textContent = "Nova ordem de serviço";
-    renderChecklist();
+    checklistVerTodos = false;
+    renderChecklist([]);
     renderMateriaisForm([]);
     abrirForm();
   };
