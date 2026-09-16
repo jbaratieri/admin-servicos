@@ -34,6 +34,7 @@ const SERVICOS_PADRAO = [
   { nome: "Limpeza profunda e Hidratação da escala", preco: 80 },
   { nome: "Retífica, nivelamento e polimento de trastes", preco: 180 },
   { nome: "Troca completa de trastes", preco: 250 },
+  { nome: "Retrastamento parcial - por traste", preco: 10 },
   { nome: "Recolagem e regulagem de cavalete", preco: 120 },
   { nome: "Confecção de cavalete e regulagem", preco: 180 },
   { nome: "Rebaixamento de cavalete", preco: 80 },
@@ -49,6 +50,8 @@ const SERVICOS_PADRAO = [
   { nome: "Instalação de sistema de Pré-amplificador (Corte no instrumento)", preco:150 },
   { nome: "Troca de tarraxas (jogo completo)", preco: 60 },
   { nome: "Instalação de roldana para correia", preco: 50 },
+  { nome: "Revisão elétrica guitarras/baixos", preco: 100 },  
+  { nome: "Limpeza chaves e potenciômetros", preco: 50 },
   {
     nome: "Manutenção - Pacote Básico",
     preco: 120,
