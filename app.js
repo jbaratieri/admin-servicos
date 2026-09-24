@@ -32,61 +32,60 @@ const INSTR_TIPOS = [
 
 /** familia: comum (todos) | acustico | eletrico — uma tabela só; a checklist prioriza. */
 const SERVICOS_PADRAO = [
+  // ===== COMUM =====
   { nome: "Diagnóstico / avaliação", preco: 50, familia: "comum" },
-  { nome: "Confecção de Rastilho em osso", preco: 70, familia: "comum" },
-  { nome: "Confecção de Nut (Pestana) em osso", preco: 70, familia: "comum" },
-  { nome: "Compensação de rastilho", preco: 50, familia: "acustico" },
-  { nome: "Limpeza profunda e Hidratação da escala", preco: 80, familia: "acustico" },
+  { nome: "Confecção de Rastilho em osso", preco: 90, familia: "comum" },
+  { nome: "Confecção de Nut (Pestana) em osso", preco: 90, familia: "comum" },
   { nome: "Retífica, nivelamento e polimento de trastes", preco: 180, familia: "comum" },
-  { nome: "Troca completa de trastes", preco: 250, familia: "comum" },
+  { nome: "Troca completa de trastes", preco: 350, familia: "comum" },
   { nome: "Retrastamento parcial - por traste", preco: 10, familia: "comum" },
-  { nome: "Recolagem e regulagem de cavalete", preco: 120, familia: "acustico" },
-  { nome: "Confecção de cavalete e regulagem", preco: 180, familia: "acustico" },
-  { nome: "Rebaixamento de cavalete", preco: 80, familia: "acustico" },
   { nome: "Ajuste Ação das cordas e oitavas", preco: 120, familia: "comum" },
-  { nome: "Ajuste de ponte / tremolo", preco: 80, familia: "eletrico" },
   { nome: "Troca de cordas + Limpeza e hidratação básica", preco: 60, familia: "comum" },
   { nome: "Ajuste de tensor", preco: 60, familia: "comum" },
   { nome: "Colagem de trinca", preco: 100, familia: "comum" },
-  { nome: "Colagem Braço/Headstock", preco: 200, familia: "comum" },
+  { nome: "Colagem Braço/Headstock", preco: 300, familia: "comum" },
   { nome: "Retoque de acabamento", preco: 80, familia: "comum" },
   { nome: "Regulagem geral", preco: 150, familia: "comum" },
   { nome: "Limpeza geral", preco: 50, familia: "comum" },
+  { nome: "Troca de tarraxas (jogo completo)", preco: 80, familia: "comum" },
+  { nome: "Instalação de roldana para correia", preco: 50, familia: "comum" },
+
+  // ===== ACÚSTICO =====
+  { nome: "Compensação de rastilho", preco: 50, familia: "acustico" },
+  { nome: "Limpeza profunda e Hidratação da escala", preco: 80, familia: "acustico" },
+  { nome: "Recolagem e regulagem de cavalete", preco: 120, familia: "acustico" },
+  { nome: "Confecção de cavalete e regulagem", preco: 180, familia: "acustico" },
+  { nome: "Rebaixamento de cavalete", preco: 80, familia: "acustico" },
+  { nome: "Instalação de captador Piezo / Rastilho elétrico", preco: 120, familia: "acustico" },
+  { nome: "Instalação de sistema de Pré-amplificador (Corte no instrumento)", preco: 200, familia: "acustico" },
+  {
+    nome: "Setup acústico Básico",
+    preco: 120,
+    familia: "acustico",
+    desc: "Cordas • Regulagem básica • Limpeza geral"
+  },
+  {
+    nome: "Setup acústico completo",
+    preco: 220,
+    familia: "acustico",
+    desc: "Cordas • Tensor • Ação e oitavas • Limpeza, hidratação e polimento leve"
+  },
+  {
+    nome: "Setup acústico Premium",
+    preco: 320,
+    familia: "acustico",
+    desc: "Setup completo + Nivelamento trastes, Ajuste rastilho e Correções leves"
+  },
+
+  // ===== ELÉTRICO =====
+  { nome: "Ajuste de ponte / tremolo", preco: 80, familia: "eletrico" },
   { nome: "Troca de Jack P10 ou redone de fiação", preco: 60, familia: "eletrico" },
-  { nome: "Instalação de captador Piezo / Rastilho elétrico", preco: 80, familia: "acustico" },
   { nome: "Troca de captador (magnético)", preco: 80, familia: "eletrico" },
   { nome: "Altura de captadores", preco: 40, familia: "eletrico" },
   { nome: "Troca de chave seletora", preco: 60, familia: "eletrico" },
   { nome: "Blindagem / malha (ruído)", preco: 80, familia: "eletrico" },
-  { nome: "Instalação de sistema de Pré-amplificador (Corte no instrumento)", preco: 150, familia: "acustico" },
-  { nome: "Troca de tarraxas (jogo completo)", preco: 60, familia: "comum" },
-  { nome: "Instalação de roldana para correia", preco: 50, familia: "comum" },
   { nome: "Revisão elétrica guitarras/baixos", preco: 100, familia: "eletrico" },
   { nome: "Limpeza chaves e potenciômetros", preco: 50, familia: "eletrico" },
-  {
-    nome: "Manutenção - Pacote Básico",
-    preco: 120,
-    familia: "comum",
-    desc: "Troca de cordas • Regulagem básica • Limpeza geral"
-  },
-  {
-    nome: "Manutenção - Pacote Completo",
-    preco: 220,
-    familia: "acustico",
-    desc: "Setup completo • Hidratação • Polimento leve • Troca de cordas"
-  },
-  {
-    nome: "Manutenção - Pacote Premium",
-    preco: 320,
-    familia: "acustico",
-    desc: "Setup avançado • Nivelamento trastes • Ajuste rastilho • Correções leves"
-  },
-  {
-    nome: "Setup acústico",
-    preco: 220,
-    familia: "acustico",
-    desc: "Cordas • Tensor • Ação e oitavas • Limpeza e hidratação"
-  },
   {
     nome: "Setup elétrico",
     preco: 180,
@@ -121,7 +120,9 @@ const PECAS_PADRAO = [
   { nome: "Jack P10", preco: 0, unidade: "un" },
   { nome: "Jack plate", preco: 0, unidade: "un" },
   { nome: "Roldana / strap pin", preco: 0, unidade: "un" },
-  { nome: "Pré-amplificador", preco: 0, unidade: "un" }
+  { nome: "Pré-amplificador", preco: 0, unidade: "un" },
+  { nome: "Circuito Treble Bleed", preco: 0, unidade: "un" },
+  { nome: "Capacitores", preco: 0, unidade: "un" }
 ];
 
 const IDB_NAME = "luthier-os-local-v1";
